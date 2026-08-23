@@ -155,7 +155,7 @@ function PerformanceChart({ bundle }: { bundle: ChannelBundle | null }) {
   const showYt = filter !== "x";
   const hasData = series.length > 1 && series.some((s) => s.yt > 0);
 
-  const W = 800, H = 230, PADX = 6, TOP = 26, BOT = 26;
+  const W = 800, H = 250, PADX = 6, TOP = 26, BOT = 26;
   const max = Math.max(1, ...series.map((p) => p.yt));
   const xAt = (i: number) => PADX + (i / Math.max(1, series.length - 1)) * (W - PADX * 2);
   const yAt = (v: number) => H - BOT - (v / max) * (H - TOP - BOT);
@@ -190,18 +190,27 @@ function PerformanceChart({ bundle }: { bundle: ChannelBundle | null }) {
 
       <div className="relative px-3 pb-4 pt-5 md:px-4">
         {!hasData ? (
-          <div className="flex flex-col items-center justify-center rounded-[16px] border border-dashed border-white/[0.08] bg-white/[0.012] py-16 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-violet-500/[0.09] text-violet-300 shadow-[0_0_24px_-8px_rgba(139,92,246,0.5)]">
-              <BarChart3 className="w-5 h-5" aria-hidden="true" />
-            </span>
-            <p className="mt-4 text-[14px] font-medium text-white">Performance data will appear here</p>
+          <div className="flex min-h-[280px] flex-col items-center justify-center rounded-[16px] border border-dashed border-white/[0.08] bg-white/[0.012] py-16 text-center md:min-h-[340px]">
+            {/* mini decorative analytics viz */}
+            <svg viewBox="0 0 120 44" className="h-11 w-32 opacity-70" aria-hidden="true">
+              <defs>
+                <linearGradient id="emptyFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="rgb(139,92,246)" stopOpacity="0.35" />
+                  <stop offset="100%" stopColor="rgb(139,92,246)" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <path d="M0,36 C15,32 22,38 35,30 C48,22 55,28 70,18 C85,9 95,14 120,6 L120,44 L0,44 Z" fill="url(#emptyFill)" />
+              <path d="M0,36 C15,32 22,38 35,30 C48,22 55,28 70,18 C85,9 95,14 120,6" fill="none" stroke="rgb(167,139,250)" strokeWidth="1.6" strokeLinecap="round" />
+              <circle cx="120" cy="6" r="2.4" fill="rgb(167,139,250)" />
+            </svg>
+            <p className="mt-4 text-[14px] font-medium text-white">Performance history will appear here</p>
             <p className="mt-1.5 max-w-sm text-[12px] leading-relaxed text-soft">
-              {bundle?.analytics.message || "Connect analytics access to unlock historical trends. Your live totals are shown above."}
+              {bundle?.analytics.message || "Connect analytics data to unlock historical trends."}
             </p>
           </div>
         ) : (
           <div className="relative" onMouseLeave={() => setHoverIdx(null)}>
-            <svg viewBox={`0 0 ${W} ${H}`} className="h-60 w-full md:h-72" role="img" aria-label="Performance trend chart">
+            <svg viewBox={`0 0 ${W} ${H}`} className="h-[280px] w-full md:h-[340px]" role="img" aria-label="Performance trend chart">
               <defs>
                 <linearGradient id="ytFill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="rgb(239,68,68)" stopOpacity="0.2" />
@@ -282,12 +291,12 @@ function VideoRow({ v, rank, showRank = false }: { v: Video; rank?: number; show
     <li className="group/row flex items-center gap-3.5 rounded-xl p-2.5 transition-colors duration-200 hover:bg-white/[0.035]" data-testid="dashboard-video-row">
       <div className="relative shrink-0">
         {v.thumbnail ? (
-          <img src={v.thumbnail} alt="" className="h-[52px] w-[92px] rounded-lg border border-white/[0.08] object-cover transition-transform duration-200 group-hover/row:scale-[1.04]" loading="lazy" />
+          <img src={v.thumbnail} alt="" className="h-[58px] w-[102px] rounded-lg border border-white/[0.08] object-cover transition-transform duration-300 group-hover/row:scale-[1.05]" loading="lazy" />
         ) : (
-          <div className="flex h-[52px] w-[92px] items-center justify-center rounded-lg bg-white/[0.05]"><Film className="h-5 w-5 text-soft" aria-hidden="true" /></div>
+          <div className="flex h-[58px] w-[102px] items-center justify-center rounded-lg bg-white/[0.05]"><Film className="h-5 w-5 text-soft" aria-hidden="true" /></div>
         )}
         {showRank && (
-          <span className="absolute -left-2 -top-2 flex h-5 items-center rounded-md bg-[hsl(240,10%,7%)] px-1 text-[10px] font-bold tabular-nums text-white/70 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
+          <span className="absolute -left-2.5 -top-2 flex h-5 items-center rounded-md bg-[hsl(240,10%,7%)] px-1 text-[10px] font-bold tabular-nums text-white/70 shadow-[0_0_0_1px_rgba(255,255,255,0.08)]">
             {String(rank).padStart(2, "0")}
           </span>
         )}
@@ -438,6 +447,19 @@ export default function Dashboard() {
 
   const sinceSync = Math.max(0, Math.round((Date.now() - lastSync.getTime()) / 60000));
 
+  const hour = new Date().getHours();
+  const greeting = hour < 5 ? "Good night" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  // Growth claim only when derivable from real trend data
+  const trend = sparkYt.length >= 4 ? (() => {
+    const half = Math.floor(sparkYt.length / 2);
+    const a = sparkYt.slice(0, half).reduce((s, v) => s + v, 0);
+    const b = sparkYt.slice(half).reduce((s, v) => s + v, 0);
+    return b > a;
+  })() : false;
+  const heroSub = trend
+    ? "Your audience is growing across YouTube & X"
+    : "Your social performance at a glance";
+
   return (
     <div data-testid="dashboard-page" className="space-y-6 md:space-y-8">
       <style>{`@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }`}</style>
@@ -445,15 +467,21 @@ export default function Dashboard() {
       {/* ---- Page header ---- */}
       <div className="flex flex-wrap items-start justify-between gap-4" data-testid="dashboard-header" style={{ animation: "fadeUp .5s ease both" }}>
         <div>
-          <h1 className="text-[22px] font-semibold tracking-tight text-white md:text-[26px]">Overview</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${ytAvailable ? "border-red-500/15 bg-red-500/[0.06] text-red-300" : "border-white/[0.08] bg-white/[0.03] text-soft"}`}>
-              {YT_ICON}{ch?.channelName || "YouTube not connected"}
+          <h1 className="text-[24px] font-semibold tracking-tight text-white md:text-[30px]">
+            {greeting} <span aria-hidden="true">👋</span>
+          </h1>
+          <p className="mt-1.5 text-[15px] font-medium text-white/75 md:text-[16px]">{heroSub}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-1.5 text-[12px] text-soft" data-testid="dashboard-accounts-row">
+            <span className={ytAvailable ? "inline-flex items-center gap-1.5 text-white/70" : "inline-flex items-center gap-1.5"}>
+              <span className="text-red-400">{YT_ICON}</span>YouTube<span className="text-soft/50">·</span>
+              <span className="text-white/55">{ch?.channelHandle || ch?.channelName || "not connected"}</span>
             </span>
-            <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${xAvailable ? "border-white/[0.1] bg-white/[0.05] text-white/80" : "border-white/[0.08] bg-white/[0.03] text-soft"}`}>
-              {X_SVG}{profile ? `@${profile.username}` : "X not connected"}
+            <span className="px-1 text-soft/40" aria-hidden="true">—</span>
+            <span className="inline-flex items-center gap-1.5 text-white/70">
+              <span className="text-white/70">{X_SVG}</span>X<span className="text-soft/50">·</span>
+              <span className="text-white/55">{profile ? `@${profile.username}` : "not connected"}</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 pl-1 text-[11px] text-soft" aria-live="polite" data-testid="dashboard-sync-status">
+            <span className="inline-flex items-center gap-1.5 pl-2 text-[11px] text-soft" aria-live="polite" data-testid="dashboard-sync-status">
               <span className={`h-1.5 w-1.5 rounded-full ${syncing ? "animate-pulse bg-violet-400" : "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"}`} />
               {syncing ? "Syncing…" : sinceSync < 1 ? "Synced just now" : `Synced ${sinceSync} min ago`}
             </span>
@@ -472,10 +500,10 @@ export default function Dashboard() {
 
       {/* ---- Primary metrics ---- */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="dashboard-kpi-grid">
-        <PrimaryKpi label="Views" value={ytAvailable ? formatNum(ch!.totalViews) : "—"} platform="yt" icon={<Eye className="h-3.5 w-3.5" />} spark={sparkYt} sub="All-time channel views" />
+        <PrimaryKpi label="YouTube Views" value={ytAvailable ? formatNum(ch!.totalViews) : "—"} platform="yt" icon={<Eye className="h-3.5 w-3.5" />} spark={sparkYt} sub="All-time channel views" />
         <PrimaryKpi label="Subscribers" value={ytAvailable ? formatNum(ch!.subscribers) : "—"} platform="yt" icon={<Users className="h-3.5 w-3.5" />} sub="Channel subscribers" />
-        <PrimaryKpi label="Followers" value={xAvailable ? formatNum(profile!.followers) : "—"} platform="x" icon={<Users className="h-3.5 w-3.5" />} sub={`@${profile?.username ?? "—"}`} />
-        <PrimaryKpi label="Views / Impressions" value={formatNum(tweetMetrics.views)} platform="brand" icon={<Activity className="h-3.5 w-3.5" />} sub="Combined across platforms" />
+        <PrimaryKpi label="X Followers" value={xAvailable ? formatNum(profile!.followers) : "—"} platform="x" icon={<Users className="h-3.5 w-3.5" />} sub={`@${profile?.username ?? "—"}`} />
+        <PrimaryKpi label="Combined Reach" value={formatNum(tweetMetrics.views)} platform="brand" icon={<Activity className="h-3.5 w-3.5" />} sub="Views + impressions across platforms" />
       </div>
 
       {/* ---- Secondary metrics strip ---- */}

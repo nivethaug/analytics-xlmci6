@@ -23,8 +23,8 @@ const Layout = () => {
 
       <div className="relative flex flex-col flex-1 overflow-hidden">
         <Navbar />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          <div className="mx-auto max-w-7xl">
+        <main className="flex-1 overflow-y-auto p-4 md:px-8 lg:py-8">
+          <div className="mx-auto max-w-[1400px]">
             <Outlet />
           </div>
         </main>
