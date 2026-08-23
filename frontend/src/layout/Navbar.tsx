@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Plug, Settings, Youtube, Twitter, Menu, X } from "lucide-react";
+import { LayoutDashboard, Twitter, Plug, Settings, Menu, X, RefreshCw } from "lucide-react";
 
 const links = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
@@ -11,20 +11,28 @@ const links = [
 
 const Navbar = () => {
   const [open, setOpen] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleRefresh = () => {
+    if (syncing) return;
+    setSyncing(true);
+    window.dispatchEvent(new CustomEvent("app:refresh"));
+    window.setTimeout(() => setSyncing(false), 1600);
+  };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl">
-      <div className="mx-auto max-w-7xl px-4 md:px-6 flex items-center justify-between h-16">
-        <NavLink to="/" className="flex items-center gap-2.5" data-testid="navbar-brand">
+    <header className="sticky top-0 z-40 border-b border-white/[0.06] bg-[hsl(240,10%,3%)]/85 backdrop-blur-xl">
+      <div className="mx-auto max-w-7xl px-4 md:px-6 flex items-center justify-between h-14">
+        <NavLink to="/" className="flex items-center gap-2.5 group" data-testid="navbar-brand">
           <span className="flex -space-x-1.5" aria-hidden="true">
-            <span className="p-1.5 rounded-lg bg-gradient-to-br from-red-600 to-rose-500 text-white shadow-sm shadow-red-500/30">
-              <Youtube className="w-4 h-4" aria-hidden="true" />
+            <span className="p-1.5 rounded-lg bg-gradient-to-br from-red-600 to-rose-500 text-white shadow-[0_0_16px_-2px_rgba(239,68,68,0.5)]">
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.5 12 3.5 12 3.5s-7.5 0-9.4.6A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.6 9.4.6 9.4.6s7.5 0 9.4-.6a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.6 15.6V8.4L15.8 12l-6.2 3.6z"/></svg>
             </span>
-            <span className="p-1.5 rounded-lg bg-black text-white dark:bg-white dark:text-black shadow-sm">
-              <Twitter className="w-4 h-4" aria-hidden="true" />
+            <span className="p-1.5 rounded-lg bg-white text-black shadow-[0_0_16px_-4px_rgba(255,255,255,0.6)]">
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current"><path d="M18.9 1.2h3.7l-8.1 9.3L24 22.8h-7.5l-5.8-7.6-6.7 7.6H.3l8.7-9.9L0 1.2h7.7l5.3 7 5.9-7zm-1.3 19.4h2.1L6.6 3.3H4.4l13.2 17.3z"/></svg>
             </span>
           </span>
-          <span className="font-bold text-base md:text-lg bg-gradient-to-r from-violet-600 via-fuchsia-500 to-blue-500 bg-clip-text text-transparent">
+          <span className="font-semibold text-sm md:text-[15px] tracking-tight text-gradient-brand">
             My X &amp; YouTube Stats
           </span>
         </NavLink>
@@ -38,28 +46,53 @@ const Navbar = () => {
               end={l.end}
               data-testid={`navbar-link-${l.label.toLowerCase().split(" ")[0].replace(/[^a-z]/g, "")}`}
               className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 min-h-[44px] ${
+                `flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-[13px] font-medium transition-all duration-300 min-h-[36px] ${
                   isActive
-                    ? "bg-gradient-to-r from-violet-100 to-blue-100 dark:from-violet-900/40 dark:to-blue-900/40 text-violet-700 dark:text-violet-300 shadow-sm"
-                    : "text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
+                    ? "bg-violet-500/[0.12] text-violet-300 shadow-[inset_0_0_0_1px_rgba(139,92,246,0.25),0_0_20px_-4px_rgba(139,92,246,0.45)]"
+                    : "text-[hsl(240,6%,62%)] hover:text-foreground hover:bg-white/[0.05]"
                 }`
               }
             >
-              <span className="flex items-center gap-2"><l.icon className="w-4 h-4" aria-hidden="true" />{l.label}</span>
+              <l.icon className="w-4 h-4" aria-hidden="true" />{l.label}
             </NavLink>
           ))}
         </nav>
 
-        {/* Mobile toggle */}
-        <button
-          className="md:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 min-h-[44px] min-w-[44px] flex items-center justify-center"
-          onClick={() => setOpen(!open)}
-          aria-label={open ? "Close menu" : "Open menu"}
-          aria-expanded={open}
-          data-testid="sidebar-toggle-button"
-        >
-          {open ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
-        </button>
+        <div className="flex items-center gap-2.5">
+          {/* Sync indicator */}
+          <span
+            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-400/20 bg-emerald-400/[0.06] text-[11px] font-medium text-emerald-300"
+            data-testid="navbar-sync-indicator"
+            aria-live="polite"
+          >
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400"></span>
+            </span>
+            Connected
+          </span>
+
+          {/* Refresh */}
+          <button
+            onClick={handleRefresh}
+            aria-label="Refresh data"
+            data-testid="navbar-refresh-button"
+            className="p-2 rounded-xl text-[hsl(240,6%,62%)] hover:text-violet-300 hover:bg-violet-500/10 hover:shadow-[0_0_18px_-4px_rgba(139,92,246,0.5)] transition-all min-h-[36px] min-w-[36px] flex items-center justify-center"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin text-violet-400" : ""}`} aria-hidden="true" />
+          </button>
+
+          {/* Mobile toggle */}
+          <button
+            className="md:hidden p-2 rounded-xl hover:bg-white/[0.06] text-[hsl(240,6%,62%)] hover:text-foreground transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+            onClick={() => setOpen(!open)}
+            aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            data-testid="sidebar-toggle-button"
+          >
+            {open ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile menu */}
@@ -75,12 +108,14 @@ const Navbar = () => {
               end={l.end}
               onClick={() => setOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium min-h-[44px] transition-colors ${
-                  isActive ? "bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300" : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
+                `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium min-h-[44px] transition-all ${
+                  isActive
+                    ? "bg-violet-500/[0.12] text-violet-300 shadow-[inset_0_0_0_1px_rgba(139,92,246,0.25)]"
+                    : "text-[hsl(240,6%,62%)] hover:text-foreground hover:bg-white/[0.05]"
                 }`
               }
             >
-              <span className="flex items-center gap-3"><l.icon className="w-4 h-4" aria-hidden="true" />{l.label}</span>
+              <l.icon className="w-4 h-4" aria-hidden="true" />{l.label}
             </NavLink>
           ))}
         </div>
