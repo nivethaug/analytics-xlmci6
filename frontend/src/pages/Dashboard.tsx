@@ -209,10 +209,10 @@ function InsightCard({ kicker, headline, context, signal, tone, actionLabel, act
     </>
   );
   const cls = weight === "primary"
-    ? "group relative flex flex-col rounded-2xl border border-rose-400/[0.12] bg-[hsl(240,8%,6%)] p-4 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_10px_30px_-12px_rgba(0,0,0,0.7)] transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-400/25 hover:bg-[hsl(240,8%,6.8%)]"
+    ? "group relative flex flex-col rounded-2xl bg-[hsl(240,8%,6.2%)] p-4 shadow-[0_1px_0_0_rgba(255,255,255,0.045)_inset,0_10px_30px_-12px_rgba(0,0,0,0.7),inset_3px_0_0_0_rgba(251,113,133,0.22)] transition-all duration-200 hover:-translate-y-0.5 hover:bg-[hsl(240,8%,7%)] hover:shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_14px_34px_-12px_rgba(0,0,0,0.8),inset_3px_0_0_0_rgba(251,113,133,0.4)]"
     : weight === "quiet"
       ? "group relative flex flex-col rounded-2xl bg-white/[0.015] p-4 transition-all duration-200 hover:bg-white/[0.03]"
-      : "group relative flex flex-col rounded-2xl border border-white/[0.05] bg-[hsl(240,8%,5.5%)] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.11] hover:bg-[hsl(240,8%,6.5%)]";
+      : "group relative flex flex-col rounded-2xl bg-[hsl(240,8%,5.5%)] shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset,0_8px_22px_-10px_rgba(0,0,0,0.6)] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_12px_30px_-12px_rgba(0,0,0,0.75),0_0_0_1px_rgba(255,255,255,0.05)] hover:bg-[hsl(240,8%,6.5%)]";
   const style = { animation: `fadeUp 0.45s ease both ${delay}ms` };
   if (actionTo) {
     return <Link to={actionTo} data-testid={testId} className={cls} style={style}>{inner}</Link>;
@@ -361,8 +361,10 @@ function PerformanceChart({ bundle, videos }: { bundle: ChannelBundle | null; vi
                 const y = TOP + f * (H - TOP - BOT);
                 return <line key={f} x1={0} x2={W} y1={y} y2={y} stroke="rgba(255,255,255,0.04)" strokeWidth="1" strokeDasharray={f === 1 ? "0" : "3 7"} />;
               })}
-              <path d={`M ${xAt(0)},${H - BOT} ${smooth.replace("M", "L")} L ${xAt(sliced.length - 1)},${H - BOT} Z`} fill="url(#ytFill)" />
-              <path d={smooth} fill="none" stroke="rgb(248,113,113)" strokeWidth="2" strokeLinecap="round" style={{ filter: "drop-shadow(0 0 8px rgba(239,68,68,0.45))" }} />
+              <path key={`a-${filter}-${range}`} d={`M ${xAt(0)},${H - BOT} ${smooth.replace("M", "L")} L ${xAt(sliced.length - 1)},${H - BOT} Z`} fill="url(#ytFill)" className="chart-area-anim" />
+              <path key={`l-${filter}-${range}`} d={smooth} fill="none" stroke="rgb(248,113,113)" strokeWidth="2" strokeLinecap="round"
+                className={prefersReducedMotion() ? "" : "chart-line-anim"}
+                style={{ "--len": 2400, filter: "drop-shadow(0 0 8px rgba(239,68,68,0.45))" } as React.CSSProperties} />
               {[1, 0.5, 0].map((f) => (
                 <text key={f} x={4} y={TOP + (1 - f) * (H - TOP - BOT) - 5} fill="rgba(255,255,255,0.3)" fontSize="10" className="tabular-nums">
                   {formatNum(max * f)}
@@ -549,7 +551,7 @@ export default function Dashboard() {
       {/* ---- Hero ---- */}
       <div className="flex flex-wrap items-start justify-between gap-4" data-testid="dashboard-header" style={{ animation: "fadeUp .4s ease both" }}>
         <div>
-          <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-white md:text-[27px]">Your content, at a glance.</h1>
+          <h1 className="text-[27px] font-semibold leading-tight tracking-[-0.022em] text-white md:text-[29px]">Your content, at a glance.</h1>
           <p className="mt-1 text-[13px] text-soft">See what&rsquo;s performing, what changed, and what deserves your attention.</p>
           <div className="mt-2.5 flex flex-wrap items-center gap-2" data-testid="dashboard-accounts-row">
             <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${ytAvailable ? "border-red-400/[0.14] bg-red-400/[0.04] text-white/80" : "border-white/[0.07] bg-white/[0.02] text-soft/60"}`}>

@@ -108,9 +108,10 @@
 }
 
 @layer components {
-  /* Elevated dark surface — the core card treatment */
+  /* Elevated dark surface — tonal depth over borders */
   .surface {
-    @apply rounded-2xl border border-white/[0.06] bg-[hsl(240,8%,5.5%)] shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_8px_24px_-8px_rgba(0,0,0,0.6)];
+    border: 1px solid rgba(255,255,255,0.028);
+    @apply rounded-2xl bg-[hsl(240,8%,5.5%)] shadow-[0_1px_0_0_rgba(255,255,255,0.035)_inset,0_10px_28px_-10px_rgba(0,0,0,0.65)];
   }
   .surface-hover {
     @apply transition-all duration-300 hover:border-white/[0.12] hover:shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset,0_16px_40px_-12px_rgba(0,0,0,0.8)] hover:-translate-y-0.5;
