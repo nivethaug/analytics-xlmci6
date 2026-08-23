@@ -22,8 +22,7 @@ const mainNavItems = [
   { name: 'Integrations', href: '/integrations', icon: LayoutDashboard },
 ];
 
-const systemNavItems = [  { name: 'Settings', href: '/settings', icon: Settings },
-];
+const systemNavItems = [];
 
 interface AppLayoutProps {
   children: React.ReactNode;

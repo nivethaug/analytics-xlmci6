@@ -2,8 +2,7 @@
   "pages": [
     "Dashboard",
     "Analytics",
-    "Integrations",
-    "Settings"
+    "Integrations"
   ],
   "generated_at": null,
   "scaffolded": false
