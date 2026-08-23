@@ -46,7 +46,7 @@
       "path": "src/pages/Dashboard.tsx",
       "type": "page",
       "purpose": "4 KPI metric cards (subscribers, views, videos, watch time), line chart of daily views, latest 5 videos table, loading skeletons",
-      "summary": "Premium editorial social-intelligence dashboard: hero + platform status chips, tiered KPI grid (primary vs secondary metrics), insight-card attention layer with priority kickers, 340px animated performance chart with glass tooltip, top-performing content (YouTube thumbnails + X post previews), platform overview comparison."
+      "summary": "Dashboard: editorial hero, hierarchical KPIs (primary YouTube Views + sparkline), differentiated insight cards (primary/default/quiet weights, status line), premium 340px performance chart, top content feed, platform overview. Honest data gating preserved."
     },
     {
       "path": "src/pages/Analytics.tsx",

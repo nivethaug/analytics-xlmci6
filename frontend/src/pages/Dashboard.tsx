@@ -130,22 +130,40 @@ function TrendLine({ pct, comparisonLabel, noDataLabel }:
 
 /* ---------- KPI cards (primary vs secondary hierarchy) ---------- */
 
-function KpiCard({ label, value, pct, comparisonLabel, noDataLabel, icon, testId, loading, primary }:
-  { label: string; value: string; pct: number | null; comparisonLabel?: string; noDataLabel: string; icon: React.ReactNode; testId: string; loading?: boolean; primary?: boolean }) {
+/** Tiny understated sparkline (only rendered when real history exists). */
+function Sparkline({ data, className = "" }: { data: number[]; className?: string }) {
+  const pts = data.filter((n) => n >= 0);
+  if (pts.length < 2) return null;
+  const max = Math.max(1, ...pts);
+  const W = 88, H = 22;
+  const d = pts.map((v, i) => `${(i / (pts.length - 1)) * W},${H - (v / max) * (H - 3) - 1.5}`).join(" L ");
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className={`h-[22px] w-[88px] ${className}`} aria-hidden="true">
+      <path d={`M ${d}`} fill="none" stroke="rgb(248,113,113)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.75" />
+    </svg>
+  );
+}
+
+function KpiCard({ label, value, pct, comparisonLabel, noDataLabel, icon, testId, loading, primary, spark, accentClass }:
+  { label: string; value: string; pct: number | null; comparisonLabel?: string; noDataLabel: string; icon: React.ReactNode; testId: string; loading?: boolean; primary?: boolean; spark?: number[]; accentClass?: string }) {
   const glow = useGlowSpot<HTMLDivElement>();
   return (
     <div
       data-testid={testId}
       {...glow}
-      className={`glow-spot surface surface-hover group relative overflow-hidden rounded-xl bg-gradient-to-b from-white/[0.03] to-transparent transition-[transform,border-color] duration-200 hover:-translate-y-[3px] hover:border-white/[0.14] ${primary ? "p-5" : "p-4"}`}
+      className={`glow-spot group relative overflow-hidden rounded-xl bg-white/[0.025] shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset,0_8px_20px_-10px_rgba(0,0,0,0.55)] transition-[transform,background-color] duration-200 hover:-translate-y-[2px] hover:bg-white/[0.045] ${primary ? "bg-white/[0.035] p-4" : "p-4 pt-3.5"}`}
     >
+      {primary && <span className={`pointer-events-none absolute inset-x-0 top-0 h-px ${accentClass ?? "bg-gradient-to-r from-transparent via-red-400/40 to-transparent"}`} aria-hidden="true" />}
       <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-soft">
         <span className="text-red-400/80">{icon}</span>{label}
       </p>
-      <div className="mt-2 flex items-baseline">
-        {loading ? <Skeleton className={primary ? "h-10 w-24" : "h-8 w-20"} /> : (
-          <CountUp value={value} className={`block font-semibold leading-none tracking-tight text-white tabular-nums transition-transform duration-200 group-hover:scale-[1.02] group-hover:origin-left ${primary ? "text-[36px]" : "text-[28px]"}`} />
-        )}
+      <div className="mt-1.5 flex items-end justify-between gap-2">
+        <div className="flex items-baseline">
+          {loading ? <Skeleton className={primary ? "h-9 w-24" : "h-8 w-20"} /> : (
+            <CountUp value={value} className={`block font-semibold leading-none tracking-tight text-white tabular-nums transition-transform duration-200 group-hover:scale-[1.02] group-hover:origin-left ${primary ? "text-[34px]" : "text-[26px]"}`} />
+          )}
+        </div>
+        {primary && spark && spark.length > 1 && <Sparkline data={spark} className="mb-1 shrink-0 opacity-80" />}
       </div>
       <TrendLine pct={pct} comparisonLabel={comparisonLabel} noDataLabel={noDataLabel} />
     </div>
@@ -156,10 +174,11 @@ function KpiCard({ label, value, pct, comparisonLabel, noDataLabel, icon, testId
 
 type InsightTone = "up" | "down" | "neutral";
 
-function InsightCard({ kicker, headline, context, signal, tone, actionLabel, actionTo, actionExt, testId, delay }:
+function InsightCard({ kicker, headline, context, signal, tone, actionLabel, actionTo, actionExt, testId, delay, weight = "default", statusLine }:
   {
     kicker: string; headline: string; context?: string; signal?: { text: string; tone: InsightTone };
     actionLabel?: string; actionTo?: string; actionExt?: string; testId: string; delay: number;
+    weight?: "primary" | "default" | "quiet"; statusLine?: string;
   }) {
   const kickerCls = tone === "down" ? "text-rose-300/80" : tone === "up" ? "text-emerald-300/80" : "text-violet-300/80";
   const signalCls = tone === "down" ? "text-rose-300" : tone === "up" ? "text-emerald-300" : "text-violet-300";
@@ -170,21 +189,30 @@ function InsightCard({ kicker, headline, context, signal, tone, actionLabel, act
     <>
       <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/[0.035] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
       <p className={`relative text-[10px] font-semibold uppercase tracking-[0.14em] ${kickerCls}`}>{kicker}</p>
-      <h3 className="relative mt-1.5 text-[13.5px] font-semibold leading-snug text-white/95">{headline}</h3>
+      <h3 className={`relative mt-1.5 font-semibold leading-snug text-white/95 ${weight === "primary" ? "text-[14.5px]" : weight === "quiet" ? "text-[13px] text-white/85" : "text-[13.5px]"}`}>{headline}</h3>
       {context && <p className="relative mt-1 text-[11.5px] leading-relaxed text-soft">{context}</p>}
       {signal && (
-        <p className={`anim-pop-in relative mt-2.5 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold tabular-nums ${tone === "down" ? "border-rose-400/15 bg-rose-400/[0.05]" : tone === "up" ? "border-emerald-400/15 bg-emerald-400/[0.05]" : "border-violet-400/15 bg-violet-400/[0.05]"} ${signalCls}`}>
+        <p className={`anim-pop-in relative mt-2.5 inline-flex items-center gap-1.5 text-[11.5px] font-semibold tabular-nums ${signalCls}`}>
           {signalIcon}{signal.text}
         </p>
       )}
+      {statusLine && (
+        <p className="relative mt-2.5 flex items-center gap-1.5 text-[11px] text-soft">
+          <span className="h-1 w-1 rounded-full bg-violet-300/70" aria-hidden="true" />{statusLine}
+        </p>
+      )}
       {actionLabel && (
-        <span className="relative mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-violet-300/90 transition-all duration-200 group-hover:gap-1.5 group-hover:text-violet-200">
+        <span className={`relative inline-flex items-center gap-1 text-[11.5px] font-medium text-violet-300/90 transition-all duration-200 group-hover:gap-1.5 group-hover:text-violet-200 ${weight === "primary" ? "mt-3" : "mt-2.5"}`}>
           {actionLabel}<ArrowRight className="h-3 w-3" aria-hidden="true" />
         </span>
       )}
     </>
   );
-  const cls = "group relative flex flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 pl-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.12] hover:bg-white/[0.035]";
+  const cls = weight === "primary"
+    ? "group relative flex flex-col rounded-2xl border border-rose-400/[0.12] bg-[hsl(240,8%,6%)] p-4 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_10px_30px_-12px_rgba(0,0,0,0.7)] transition-all duration-200 hover:-translate-y-0.5 hover:border-rose-400/25 hover:bg-[hsl(240,8%,6.8%)]"
+    : weight === "quiet"
+      ? "group relative flex flex-col rounded-2xl bg-white/[0.015] p-4 transition-all duration-200 hover:bg-white/[0.03]"
+      : "group relative flex flex-col rounded-2xl border border-white/[0.05] bg-[hsl(240,8%,5.5%)] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.11] hover:bg-[hsl(240,8%,6.5%)]";
   const style = { animation: `fadeUp 0.45s ease both ${delay}ms` };
   if (actionTo) {
     return <Link to={actionTo} data-testid={testId} className={cls} style={style}>{inner}</Link>;
@@ -515,15 +543,15 @@ export default function Dashboard() {
   const latestVideoUrl = latest ? `https://www.youtube.com/watch?v=${latest.v.id}` : undefined;
 
   return (
-    <div data-testid="dashboard-page" className="space-y-4">
+    <div data-testid="dashboard-page" className="space-y-3.5">
       <style>{`@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }`}</style>
 
       {/* ---- Hero ---- */}
       <div className="flex flex-wrap items-start justify-between gap-4" data-testid="dashboard-header" style={{ animation: "fadeUp .4s ease both" }}>
         <div>
-          <h1 className="text-[19px] font-semibold tracking-tight text-white md:text-[21px]">Your content, at a glance.</h1>
-          <p className="mt-1 text-[12.5px] text-soft">See what&rsquo;s performing, what changed, and what deserves your attention.</p>
-          <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="dashboard-accounts-row">
+          <h1 className="text-[24px] font-semibold leading-tight tracking-[-0.02em] text-white md:text-[27px]">Your content, at a glance.</h1>
+          <p className="mt-1 text-[13px] text-soft">See what&rsquo;s performing, what changed, and what deserves your attention.</p>
+          <div className="mt-2.5 flex flex-wrap items-center gap-2" data-testid="dashboard-accounts-row">
             <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${ytAvailable ? "border-red-400/[0.14] bg-red-400/[0.04] text-white/80" : "border-white/[0.07] bg-white/[0.02] text-soft/60"}`}>
               <span className="text-red-400">{YT_ICON}</span>YouTube
               <span className={ytAvailable ? "text-emerald-300" : "text-soft/50"}>{ytAvailable ? "Connected" : "Off"}</span>
@@ -557,6 +585,7 @@ export default function Dashboard() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="dashboard-kpi-grid">
         <KpiCard primary label="YouTube Views" value={ytAvailable ? formatNum(ch!.totalViews) : "—"}
           pct={views7dChange} comparisonLabel="prev 7 days" icon={<Eye className="h-3 w-3" aria-hidden="true" />}
+          spark={(bundle?.analytics.days ?? []).slice(-14).map((d) => d.views)}
           testId="dashboard-kpi-youtube-views" loading={!ytAvailable} noDataLabel="Lifetime total" />
         <KpiCard primary label="Subscribers" value={ytAvailable ? formatNum(ch!.subscribers) : "—"}
           pct={null} icon={<Youtube className="h-3 w-3" aria-hidden="true" />}
@@ -583,7 +612,7 @@ export default function Dashboard() {
         <div className="grid gap-3 md:grid-cols-3">
           {/* Insight 1 — latest video performance */}
           {latest && latestChange !== null && latestChange <= -15 ? (
-            <InsightCard tone="down" kicker="High attention" headline={latest.v.title}
+            <InsightCard tone="down" weight="primary" kicker="High attention" headline={latest.v.title}
               context={`${formatNum(latestViews)} views · ${formatDate(latest.v.publishedAt)}`}
               signal={{ text: `${Math.abs(latestChange).toFixed(0)}% below recent average`, tone: "down" }}
               actionLabel="View video" actionExt={latestVideoUrl} testId="dashboard-attention-latest" delay={0} />
@@ -609,14 +638,14 @@ export default function Dashboard() {
               signal={{ text: `${formatNum(latestViews)} views and climbing`, tone: "up" }}
               testId="dashboard-attention-topic" delay={60} />
           ) : (
-            <InsightCard tone="neutral" kicker="Opportunity" headline="Building your baseline"
+            <InsightCard tone="neutral" weight="default" kicker="Opportunity" headline="Building your baseline"
               context="Topic trends will appear once more videos accumulate performance data."
-              signal={{ text: "📊 Collecting data", tone: "neutral" }}
+              statusLine="Collecting enough data"
               testId="dashboard-attention-topic" delay={60} />
           )}
           {/* Insight 3 — previous video comparison */}
           {previous && previous.deltaPct !== null && previous.deltaPct <= -15 ? (
-            <InsightCard tone="down" kicker="Comparison" headline={previous.v.title}
+            <InsightCard tone="down" weight="quiet" kicker="Comparison" headline={previous.v.title}
               context={`Previous video · ${formatDate(previous.v.publishedAt)}`}
               signal={{ text: `${Math.abs(previous.deltaPct).toFixed(0)}% below recent average`, tone: "down" }}
               testId="dashboard-attention-previous" delay={120} />
