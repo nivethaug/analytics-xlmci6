@@ -8,6 +8,7 @@ import Layout from "./layout/Layout";
 import Dashboard from "./pages/Dashboard";
 import Analytics from "./pages/Analytics";
 import Integrations from "./pages/Integrations";
+import X from "./pages/X";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -26,6 +27,7 @@ const App = () => (
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/integrations" element={<Integrations />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/x" element={<X />} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>

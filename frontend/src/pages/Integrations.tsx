@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Youtube, Plug, CheckCircle2, XCircle, Link2, RefreshCw, ExternalLink } from "lucide-react";
+import { Youtube, Twitter, Plug, CheckCircle2, XCircle, Link2, RefreshCw, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ interface Integration {
 
 const initial: Integration[] = [
   { id: "youtube", name: "YouTube", description: "Channel statistics, video performance and subscriber data via your connected Google account.", connected: true, scopes: ["youtube.readonly", "yt-analytics.readonly"] },
+  { id: "x", name: "X (Twitter)", description: "Your connected X profile and the 3 most recent tweets with engagement metrics.", connected: true, scopes: ["tweet.read", "users.read", "offline.access"] },
   { id: "slack", name: "Slack", description: "Post weekly analytics digests to a channel.", connected: false, scopes: ["chat:write"] },
   { id: "notion", name: "Notion", description: "Sync monthly reports into a Notion database.", connected: false, scopes: ["insert_content"] },
 ];
@@ -58,8 +59,8 @@ const Integrations = () => {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-4">
-                    <span className={`p-3 rounded-xl text-white ${integ.id === "youtube" ? "bg-gradient-to-br from-red-600 to-rose-500" : "bg-gradient-to-br from-slate-500 to-slate-600"}`}>
-                      {integ.id === "youtube" ? <Youtube className="w-6 h-6" aria-hidden="true" /> : <Link2 className="w-6 h-6" aria-hidden="true" />}
+                    <span className={`p-3 rounded-xl text-white ${integ.id === "youtube" ? "bg-gradient-to-br from-red-600 to-rose-500" : integ.id === "x" ? "bg-gradient-to-br from-slate-900 to-slate-700" : "bg-gradient-to-br from-slate-500 to-slate-600"}`}>
+                      {integ.id === "youtube" ? <Youtube className="w-6 h-6" aria-hidden="true" /> : integ.id === "x" ? <Twitter className="w-6 h-6" aria-hidden="true" /> : <Link2 className="w-6 h-6" aria-hidden="true" />}
                     </span>
                     <div>
                       <div className="flex items-center gap-2">

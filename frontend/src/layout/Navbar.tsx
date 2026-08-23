@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, BarChart3, Plug, Settings, Youtube, Menu, X } from "lucide-react";
+import { LayoutDashboard, BarChart3, Plug, Settings, Youtube, Twitter, Menu, X } from "lucide-react";
 
 const links = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/analytics", label: "Analytics", icon: BarChart3, end: false },
+  { to: "/x", label: "X (Twitter)", icon: Twitter, end: false },
   { to: "/integrations", label: "Integrations", icon: Plug, end: false },
   { to: "/settings", label: "Settings", icon: Settings, end: false },
 ];

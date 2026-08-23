@@ -14,6 +14,7 @@ from services.auth_service import AuthService
 from routes.health import router as health_router
 from routes.auth import router as auth_router
 from routes.youtube import router as youtube_router
+from routes.twitter import router as twitter_router
 
 
 @asynccontextmanager
@@ -58,6 +59,7 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(youtube_router)
+app.include_router(twitter_router)
 
 
 @app.get("/swagger", include_in_schema=False)
