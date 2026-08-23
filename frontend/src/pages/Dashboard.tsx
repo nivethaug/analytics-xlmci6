@@ -41,14 +41,18 @@ function useVideoInsights(videos: Video[] | undefined): VideoInsight[] {
     if (list.length === 0) return [];
     // baseline: average views of the older videos (exclude each video itself where possible)
     const avgAll = list.reduce((s, v) => s + v.views, 0) / list.length;
+    // a comparison needs a real baseline: at least 3 other uploads with views
+    const enough = (id: string) => {
+      const others = list.filter((o) => o.id !== id && o.views > 0);
+      return others.length >= 3 ? others.reduce((s, o) => s + o.views, 0) / others.length : null;
+    };
     return list.map((v) => {
-      const others = list.filter((o) => o.id !== v.id);
-      const avg = others.length >= 2 ? others.reduce((s, o) => s + o.views, 0) / others.length : avgAll;
+      const avg = enough(v.id);
       return {
         v,
         vph: v.views / hoursSince(v.publishedAt),
-        avgViews: avg,
-        deltaPct: avg > 0 && v.views > 0 ? ((v.views - avg) / avg) * 100 : null,
+        avgViews: avg ?? avgAll,
+        deltaPct: avg !== null && v.views > 0 ? ((v.views - avg) / avg) * 100 : null,
       };
     });
   }, [videos]);
@@ -65,11 +69,11 @@ function periodChange(days: { day: string; views: number }[] | undefined, n: num
 
 /* ---------- KPI card ---------- */
 
-function DeltaBadge({ pct, periodLabel }: { pct: number | null; periodLabel: string }) {
+function DeltaBadge({ pct, periodLabel, noDataLabel = "No history yet" }: { pct: number | null; periodLabel: string; noDataLabel?: string }) {
   if (pct === null) {
     return (
       <p className="mt-1.5 flex items-center gap-1 text-[10.5px] text-soft/70">
-        <Minus className="h-3 w-3" aria-hidden="true" />No history yet
+        <Minus className="h-3 w-3" aria-hidden="true" />{noDataLabel}
       </p>
     );
   }
@@ -83,8 +87,8 @@ function DeltaBadge({ pct, periodLabel }: { pct: number | null; periodLabel: str
   );
 }
 
-function KpiCard({ label, value, pct, periodLabel, icon, testId, loading }:
-  { label: string; value: string; pct: number | null; periodLabel: string; icon: React.ReactNode; testId: string; loading?: boolean }) {
+function KpiCard({ label, value, pct, periodLabel, icon, testId, loading, noDataLabel }:
+  { label: string; value: string; pct: number | null; periodLabel: string; icon: React.ReactNode; testId: string; loading?: boolean; noDataLabel?: string }) {
   return (
     <div
       data-testid={testId}
@@ -98,7 +102,7 @@ function KpiCard({ label, value, pct, periodLabel, icon, testId, loading }:
           <p className="text-[32px] font-semibold leading-none tracking-tight text-white tabular-nums">{value}</p>
         )}
       </div>
-      <DeltaBadge pct={pct} periodLabel={periodLabel} />
+      <DeltaBadge pct={pct} periodLabel={periodLabel} noDataLabel={noDataLabel} />
     </div>
   );
 }
@@ -350,7 +354,7 @@ function VideoInsightRow({ ins, dominant = false }: { ins: VideoInsight; dominan
           <span className="inline-flex items-center gap-1 text-white/60"><Clock className="h-3 w-3" aria-hidden="true" />{vph > 0 ? `${vph < 10 ? vph.toFixed(1) : formatNum(Math.round(vph))} views/hr` : "—"}</span>
         </div>
       </div>
-      {status && (
+      {status ? (
         <span className={`hidden shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums sm:inline-flex ${
           status === "rocket" ? "border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-300"
           : status === "down" ? "border-rose-400/20 bg-rose-400/[0.06] text-rose-300"
@@ -358,6 +362,10 @@ function VideoInsightRow({ ins, dominant = false }: { ins: VideoInsight; dominan
         }`}>
           {status === "rocket" ? <Rocket className="h-3 w-3" aria-hidden="true" /> : status === "down" ? <TrendingDown className="h-3 w-3" aria-hidden="true" /> : <Minus className="h-3 w-3" aria-hidden="true" />}
           {deltaPct! >= 0 ? `${deltaPct!.toFixed(0)}% above` : `${Math.abs(deltaPct!).toFixed(0)}% below`} avg
+        </span>
+      ) : (
+        <span className="hidden shrink-0 items-center rounded-full border border-white/[0.07] bg-white/[0.02] px-2 py-0.5 text-[10px] text-soft/70 sm:inline-flex">
+          Not enough data yet
         </span>
       )}
     </li>
@@ -412,9 +420,9 @@ export default function Dashboard() {
     const eng = videos.reduce((s, v) => s + v.likes + v.comments, 0);
     return views > 0 ? (eng / views) * 100 : null;
   }, [videos]);
-  // engagement change: latest video vs channel average of others
+  // engagement change: latest video vs channel average of others — needs a real baseline (≥3 other videos)
   const ytEngChange = useMemo(() => {
-    if (videos.length < 3) return null;
+    if (videos.length < 4) return null;
     const engRate = (v: Video) => (v.views > 0 ? ((v.likes + v.comments) / v.views) * 100 : 0);
     const latestRate = engRate(videos[0]);
     const avg = videos.slice(1).reduce((s, v) => s + engRate(v), 0) / (videos.length - 1);
@@ -482,13 +490,13 @@ export default function Dashboard() {
           testId="dashboard-kpi-youtube-views" loading={!ytAvailable} />
         <KpiCard label="Subscribers" value={ytAvailable ? formatNum(ch!.subscribers) : "—"}
           pct={null} periodLabel="prev 7 days" icon={<Youtube className="h-3 w-3" aria-hidden="true" />}
-          testId="dashboard-kpi-subscribers" loading={!ytAvailable} />
+          testId="dashboard-kpi-subscribers" loading={!ytAvailable} noDataLabel="Current total" />
         <KpiCard label="Latest Video Views" value={latest ? formatNum(latestViews) : "—"}
           pct={latestChange} periodLabel="recent avg" icon={<Film className="h-3 w-3" aria-hidden="true" />}
           testId="dashboard-kpi-latest-video-views" loading={!latest} />
         <KpiCard label="YouTube Engagement" value={ytEngagement !== null ? `${ytEngagement.toFixed(1)}%` : "—"}
           pct={ytEngChange} periodLabel="recent avg" icon={<Zap className="h-3 w-3" aria-hidden="true" />}
-          testId="dashboard-kpi-youtube-engagement" loading={videos.length === 0} />
+          testId="dashboard-kpi-youtube-engagement" loading={videos.length === 0} noDataLabel="Current total" />
       </div>
 
       {/* ---- Attention section ---- */}
@@ -510,11 +518,16 @@ export default function Dashboard() {
               detail={latest.v.title}
               metric={`${Math.abs(latestChange).toFixed(0)}% below your recent average`}
               testId="dashboard-attention-latest" delay={0} />
-          ) : (
+          ) : latest && latestChange !== null ? (
             <AttentionCard tone="topic" icon={<Sparkles className="h-3.5 w-3.5" aria-hidden="true" />}
-              title={latest ? "Latest video is tracking your average" : "Publish to unlock insights"}
-              detail={latest ? latest.v.title : "Performance signals appear once you have uploads."}
-              metric={latest && latestChange !== null ? `${latestChange >= 0 ? "+" : ""}${latestChange.toFixed(0)}% vs recent average` : undefined}
+              title="Latest video is tracking your average"
+              detail={latest.v.title}
+              metric={`${latestChange >= 0 ? "+" : ""}${latestChange.toFixed(0)}% vs recent average`}
+              testId="dashboard-attention-latest" delay={0} />
+          ) : (
+            <AttentionCard tone="topic" icon={<BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />}
+              title="Building history"
+              detail={latest ? "Keep publishing — more data is needed to identify reliable trends." : "Keep publishing to unlock performance insights."}
               testId="dashboard-attention-latest" delay={0} />
           )}
           {strongTopic ? (
