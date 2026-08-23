@@ -53,18 +53,6 @@ function CountUp({ value, className }: { value: string; className?: string }) {
   return <span className={className}>{isNum ? display + suffix : value}</span>;
 }
 
-/** Cursor-following radial glow (sets --mx/--my for .glow-spot). */
-function useGlowSpot<T extends HTMLElement>() {
-  return {
-    onMouseMove: (e: React.MouseEvent<T>) => {
-      const el = e.currentTarget;
-      const r = el.getBoundingClientRect();
-      el.style.setProperty("--mx", `${e.clientX - r.left}px`);
-      el.style.setProperty("--my", `${e.clientY - r.top}px`);
-    },
-  };
-}
-
 /* ---------- derived analytics (real data only) ---------- */
 
 function hoursSince(iso: string): number {
@@ -144,26 +132,23 @@ function Sparkline({ data, className = "" }: { data: number[]; className?: strin
   );
 }
 
-function KpiCard({ label, value, pct, comparisonLabel, noDataLabel, icon, testId, loading, primary, spark, accentClass }:
-  { label: string; value: string; pct: number | null; comparisonLabel?: string; noDataLabel: string; icon: React.ReactNode; testId: string; loading?: boolean; primary?: boolean; spark?: number[]; accentClass?: string }) {
-  const glow = useGlowSpot<HTMLDivElement>();
+/** One metric cell inside the continuous rail. Separators, not boxes. */
+function MetricCell({ label, value, pct, comparisonLabel, noDataLabel, icon, testId, loading, primary, spark }:
+  { label: string; value: string; pct: number | null; comparisonLabel?: string; noDataLabel: string; icon: React.ReactNode; testId: string; loading?: boolean; primary?: boolean; spark?: number[] }) {
   return (
     <div
       data-testid={testId}
-      {...glow}
-      className={`glow-spot group relative overflow-hidden rounded-xl bg-white/[0.025] shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset,0_8px_20px_-10px_rgba(0,0,0,0.55)] transition-[transform,background-color] duration-200 hover:-translate-y-[2px] hover:bg-white/[0.045] ${primary ? "bg-white/[0.035] p-4" : "p-4 pt-3.5"}`}
+      className={`group relative px-5 py-4 transition-colors duration-200 hover:bg-white/[0.028] xl:px-6 ${primary ? "" : "border-l border-white/[0.05]"}`}
     >
-      {primary && <span className={`pointer-events-none absolute inset-x-0 top-0 h-px ${accentClass ?? "bg-gradient-to-r from-transparent via-red-400/40 to-transparent"}`} aria-hidden="true" />}
+      {primary && <span className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-400/35 to-transparent" aria-hidden="true" />}
       <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-soft">
         <span className="text-red-400/80">{icon}</span>{label}
       </p>
-      <div className="mt-1.5 flex items-end justify-between gap-2">
-        <div className="flex items-baseline">
-          {loading ? <Skeleton className={primary ? "h-9 w-24" : "h-8 w-20"} /> : (
-            <CountUp value={value} className={`block font-semibold leading-none tracking-tight text-white tabular-nums transition-transform duration-200 group-hover:scale-[1.02] group-hover:origin-left ${primary ? "text-[34px]" : "text-[26px]"}`} />
-          )}
-        </div>
-        {primary && spark && spark.length > 1 && <Sparkline data={spark} className="mb-1 shrink-0 opacity-80" />}
+      <div className="mt-2 flex items-end justify-between gap-2">
+        {loading ? <Skeleton className={primary ? "h-9 w-24" : "h-8 w-20"} /> : (
+          <CountUp value={value} className={`block font-semibold leading-none tracking-tight text-white tabular-nums transition-transform duration-200 group-hover:scale-[1.02] group-hover:origin-left ${primary ? "text-[36px]" : "text-[27px]"}`} />
+        )}
+        {primary && spark && spark.length > 1 && <Sparkline data={spark} className="mb-1 shrink-0 opacity-70" />}
       </div>
       <TrendLine pct={pct} comparisonLabel={comparisonLabel} noDataLabel={noDataLabel} />
     </div>
@@ -197,9 +182,14 @@ function InsightCard({ kicker, headline, context, signal, tone, actionLabel, act
         </p>
       )}
       {statusLine && (
-        <p className="relative mt-2.5 flex items-center gap-1.5 text-[11px] text-soft">
-          <span className="h-1 w-1 rounded-full bg-violet-300/70" aria-hidden="true" />{statusLine}
-        </p>
+        <div className="relative mt-3">
+          <div className="h-[3px] w-28 overflow-hidden rounded-full bg-white/[0.07]">
+            <span className="block h-full w-1/2 rounded-full bg-gradient-to-r from-violet-400/50 to-violet-300/80" style={{ animation: "baselineSlide 2.4s ease-in-out infinite" }} />
+          </div>
+          <p className="mt-2 flex items-center gap-1.5 text-[11px] text-soft">
+            <span className="h-1 w-1 rounded-full bg-violet-300/80" aria-hidden="true" />{statusLine}
+          </p>
+        </div>
       )}
       {actionLabel && (
         <span className={`relative inline-flex items-center gap-1 text-[11.5px] font-medium text-violet-300/90 transition-all duration-200 group-hover:gap-1.5 group-hover:text-violet-200 ${weight === "primary" ? "mt-3" : "mt-2.5"}`}>
@@ -546,7 +536,7 @@ export default function Dashboard() {
 
   return (
     <div data-testid="dashboard-page" className="space-y-3.5">
-      <style>{`@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }`}</style>
+      <style>{`@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } } @keyframes baselineSlide { 0%,100% { transform: translateX(-40%);} 50% { transform: translateX(120%);} } @media (prefers-reduced-motion: reduce) { .baselineSlide { animation: none; } }`}</style>
 
       {/* ---- Hero ---- */}
       <div className="flex flex-wrap items-start justify-between gap-4" data-testid="dashboard-header" style={{ animation: "fadeUp .4s ease both" }}>
@@ -583,19 +573,22 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* ---- KPI row: 2 primary + 2 secondary ---- */}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="dashboard-kpi-grid">
-        <KpiCard primary label="YouTube Views" value={ytAvailable ? formatNum(ch!.totalViews) : "—"}
+      {/* ---- Metric rail: one continuous analytics surface ---- */}
+      <div
+        className="grid overflow-hidden rounded-2xl bg-[hsl(240,8%,5%)] shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_10px_28px_-12px_rgba(0,0,0,0.65)] sm:grid-cols-2 xl:grid-cols-4"
+        data-testid="dashboard-kpi-grid"
+      >
+        <MetricCell primary label="YouTube Views" value={ytAvailable ? formatNum(ch!.totalViews) : "—"}
           pct={views7dChange} comparisonLabel="prev 7 days" icon={<Eye className="h-3 w-3" aria-hidden="true" />}
           spark={(bundle?.analytics.days ?? []).slice(-14).map((d) => d.views)}
           testId="dashboard-kpi-youtube-views" loading={!ytAvailable} noDataLabel="Lifetime total" />
-        <KpiCard primary label="Subscribers" value={ytAvailable ? formatNum(ch!.subscribers) : "—"}
+        <MetricCell label="Subscribers" value={ytAvailable ? formatNum(ch!.subscribers) : "—"}
           pct={null} icon={<Youtube className="h-3 w-3" aria-hidden="true" />}
           testId="dashboard-kpi-subscribers" loading={!ytAvailable} noDataLabel="Current total" />
-        <KpiCard label="Latest Video Views" value={latest ? formatNum(latestViews) : "—"}
+        <MetricCell label="Latest Video Views" value={latest ? formatNum(latestViews) : "—"}
           pct={latestChange} comparisonLabel="recent average" icon={<Film className="h-3 w-3" aria-hidden="true" />}
           testId="dashboard-kpi-latest-video-views" loading={!latest} noDataLabel="Current views" />
-        <KpiCard label="YouTube Engagement" value={ytEngagement !== null ? `${ytEngagement.toFixed(1)}%` : "—"}
+        <MetricCell label="YouTube Engagement" value={ytEngagement !== null ? `${ytEngagement.toFixed(1)}%` : "—"}
           pct={ytEngChange} comparisonLabel="recent average" icon={<Zap className="h-3 w-3" aria-hidden="true" />}
           testId="dashboard-kpi-youtube-engagement" loading={videos.length === 0} noDataLabel="Channel lifetime rate" />
       </div>
@@ -611,7 +604,7 @@ export default function Dashboard() {
             <p className="text-[11.5px] text-soft">A quick read of what&rsquo;s changing across your platforms.</p>
           </div>
         </div>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-[1.7fr_1fr]">
           {/* Insight 1 — latest video performance */}
           {latest && latestChange !== null && latestChange <= -15 ? (
             <InsightCard tone="down" weight="primary" kicker="High attention" headline={latest.v.title}
@@ -633,6 +626,8 @@ export default function Dashboard() {
               context="More uploads are needed to identify reliable content trends."
               testId="dashboard-attention-latest" delay={0} />
           )}
+          {/* Secondary insights — stacked supporting context */}
+          <div className="flex flex-col gap-3">
           {/* Insight 2 — opportunity */}
           {strongTopic ? (
             <InsightCard tone="up" kicker="Opportunity" headline="AI-agent content is your strongest recent topic"
@@ -661,6 +656,7 @@ export default function Dashboard() {
               context="Your recent uploads are within the normal performance range."
               testId="dashboard-attention-previous" delay={120} />
           )}
+          </div>
         </div>
       </section>
 
