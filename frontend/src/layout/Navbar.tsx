@@ -4,7 +4,7 @@ import { LayoutDashboard, Twitter, Plug, Settings, Menu, X, RefreshCw } from "lu
 
 const links = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/x", label: "X (Twitter)", icon: Twitter, end: false },
+  { to: "/x", label: "X", icon: Twitter, end: false },
   { to: "/integrations", label: "Integrations", icon: Plug, end: false },
   { to: "/settings", label: "Settings", icon: Settings, end: false },
 ];
