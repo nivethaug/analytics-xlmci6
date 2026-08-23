@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Eye, Film, Youtube, TrendingDown, RefreshCw,
-  Sparkles, Zap, BarChart3, Rocket, Flame, ArrowUpRight, ArrowDownRight, Clock, ThumbsUp, MessageCircle, Minus,
+  Zap, BarChart3, Rocket, ArrowUpRight, ArrowDownRight, Clock, ThumbsUp, MessageCircle, Minus, ArrowRight,
 } from "lucide-react";
 import { fetchAll, formatNum, formatDate, type ChannelBundle, type Video } from "@/features/youtube";
 import { fetchProfile, fetchTweets, type TwitterProfile, type Tweet } from "@/features/twitter";
@@ -51,32 +51,6 @@ function CountUp({ value, className }: { value: string; className?: string }) {
     return () => cancelAnimationFrame(raf);
   }, [value]);
   return <span className={className}>{isNum ? display + suffix : value}</span>;
-}
-
-/** Reveal children when scrolled into view (fade + slight upward motion). */
-function Reveal({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [shown, setShown] = useState(false);
-  useEffect(() => {
-    if (prefersReducedMotion()) { setShown(true); return; }
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver(
-      ([e]) => { if (e.isIntersecting) { setShown(true); io.disconnect(); } },
-      { threshold: 0.08 }
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  return (
-    <div
-      ref={ref}
-      className={`${className} ${shown ? "anim-fade-up" : "opacity-0"}`}
-      style={shown ? { animationDelay: `${delay}ms` } : undefined}
-    >
-      {children}
-    </div>
-  );
 }
 
 /** Cursor-following radial glow (sets --mx/--my for .glow-spot). */
@@ -138,78 +112,87 @@ function periodChange(days: { day: string; views: number }[] | undefined, n: num
   return ((cur - prev) / prev) * 100;
 }
 
-/* ---------- KPI card ---------- */
+/* ---------- trend indicator: full phrase, subdued color ---------- */
 
-function DeltaBadge({ pct, periodLabel, noDataLabel = "No history yet" }: { pct: number | null; periodLabel: string; noDataLabel?: string }) {
+function TrendLine({ pct, comparisonLabel, noDataLabel }:
+  { pct: number | null; comparisonLabel?: string; noDataLabel: string }) {
   if (pct === null) {
-    return (
-      <p className={`mt-1.5 flex items-center gap-1 text-[10.5px] text-soft/70 ${noDataLabel === "No history yet" ? "" : "font-medium"}`}>
-        {noDataLabel === "No history yet" && <Minus className="h-3 w-3" aria-hidden="true" />}{noDataLabel}
-      </p>
-    );
+    return <p className="mt-1.5 text-[11px] text-soft/80">{noDataLabel}</p>;
   }
   const up = pct >= 0;
   return (
-    <p className={`mt-1.5 flex items-center gap-1 text-[10.5px] font-medium tabular-nums ${up ? "text-emerald-300" : "text-rose-300"}`}>
+    <p className={`mt-1.5 flex items-center gap-1 text-[11px] font-medium tabular-nums ${up ? "text-emerald-300/90" : "text-rose-300/90"}`}>
       {up ? <ArrowUpRight className="h-3 w-3" aria-hidden="true" /> : <ArrowDownRight className="h-3 w-3" aria-hidden="true" />}
-      {up ? "+" : ""}{pct.toFixed(0)}%
-      <span className="font-normal text-soft/70">vs {periodLabel}</span>
+      {Math.abs(pct).toFixed(0)}% {up ? "above" : "below"} <span className="font-normal text-soft/80">{comparisonLabel}</span>
     </p>
   );
 }
 
-function KpiCard({ label, value, pct, periodLabel, icon, testId, loading, noDataLabel }:
-  { label: string; value: string; pct: number | null; periodLabel: string; icon: React.ReactNode; testId: string; loading?: boolean; noDataLabel?: string }) {
+/* ---------- KPI cards (primary vs secondary hierarchy) ---------- */
+
+function KpiCard({ label, value, pct, comparisonLabel, noDataLabel, icon, testId, loading, primary }:
+  { label: string; value: string; pct: number | null; comparisonLabel?: string; noDataLabel: string; icon: React.ReactNode; testId: string; loading?: boolean; primary?: boolean }) {
   const glow = useGlowSpot<HTMLDivElement>();
   return (
     <div
       data-testid={testId}
       {...glow}
-      className="surface surface-hover glow-spot group relative overflow-hidden rounded-xl bg-gradient-to-b from-white/[0.03] to-transparent p-4 transition-[transform,border-color] duration-200 hover:-translate-y-[3px] hover:border-white/[0.14]"
+      className={`glow-spot surface surface-hover group relative overflow-hidden rounded-xl bg-gradient-to-b from-white/[0.03] to-transparent transition-[transform,border-color] duration-200 hover:-translate-y-[3px] hover:border-white/[0.14] ${primary ? "p-5" : "p-4"}`}
     >
       <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-soft">
         <span className="text-red-400/80">{icon}</span>{label}
       </p>
-      <div className="mt-2.5 flex items-baseline">
-        {loading ? <Skeleton className="h-9 w-20" /> : (
-          <CountUp value={value} className="block text-[32px] font-semibold leading-none tracking-tight text-white tabular-nums transition-transform duration-200 group-hover:scale-[1.02] group-hover:origin-left" />
+      <div className="mt-2 flex items-baseline">
+        {loading ? <Skeleton className={primary ? "h-10 w-24" : "h-8 w-20"} /> : (
+          <CountUp value={value} className={`block font-semibold leading-none tracking-tight text-white tabular-nums transition-transform duration-200 group-hover:scale-[1.02] group-hover:origin-left ${primary ? "text-[36px]" : "text-[28px]"}`} />
         )}
       </div>
-      <DeltaBadge pct={pct} periodLabel={periodLabel} noDataLabel={noDataLabel} />
+      <TrendLine pct={pct} comparisonLabel={comparisonLabel} noDataLabel={noDataLabel} />
     </div>
   );
 }
 
-/* ---------- Attention card ---------- */
+/* ---------- editorial insight card (signature attention layer) ---------- */
 
-function AttentionCard({ tone, icon, title, detail, metric, testId, delay }:
-  { tone: "up" | "down" | "topic"; icon: React.ReactNode; title: string; detail?: string; metric?: string; testId: string; delay: number }) {
-  const toneCls = {
-    up: "border-emerald-400/[0.14] bg-emerald-400/[0.035]",
-    down: "border-rose-400/[0.14] bg-rose-400/[0.03]",
-    topic: "border-violet-400/[0.16] bg-violet-400/[0.04]",
-  }[tone];
-  const iconCls = {
-    up: "text-emerald-300 bg-emerald-400/10 border-emerald-400/20",
-    down: "text-rose-300 bg-rose-400/10 border-rose-400/20",
-    topic: "text-violet-300 bg-violet-400/10 border-violet-400/20",
-  }[tone];
-  return (
-    <div
-      data-testid={testId}
-      className={`rounded-2xl border p-4 transition-transform duration-200 hover:-translate-y-0.5 ${toneCls}`}
-      style={{ animation: `fadeUp 0.45s ease both ${delay}ms` }}
-    >
-      <div className="flex items-start gap-3">
-        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${iconCls}`}>{icon}</span>
-        <div className="min-w-0">
-          <p className="text-[12.5px] font-semibold leading-snug text-white/90">{title}</p>
-          {detail && <p className="mt-0.5 truncate text-[11.5px] text-soft">{detail}</p>}
-          {metric && <CountUp value={metric} className={`mt-1 block text-[12px] font-semibold tabular-nums anim-pop-in ${tone === "down" ? "text-rose-300" : tone === "up" ? "text-emerald-300" : "text-violet-300"}`} />}
-        </div>
-      </div>
-    </div>
+type InsightTone = "up" | "down" | "neutral";
+
+function InsightCard({ kicker, headline, context, signal, tone, actionLabel, actionTo, actionExt, testId, delay }:
+  {
+    kicker: string; headline: string; context?: string; signal?: { text: string; tone: InsightTone };
+    actionLabel?: string; actionTo?: string; actionExt?: string; testId: string; delay: number;
+  }) {
+  const kickerCls = tone === "down" ? "text-rose-300/80" : tone === "up" ? "text-emerald-300/80" : "text-violet-300/80";
+  const signalCls = tone === "down" ? "text-rose-300" : tone === "up" ? "text-emerald-300" : "text-violet-300";
+  const signalIcon = tone === "down" ? <ArrowDownRight className="h-3.5 w-3.5" aria-hidden="true" />
+    : tone === "up" ? <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+    : <BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />;
+  const inner = (
+    <>
+      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/[0.035] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      <p className={`relative text-[10px] font-semibold uppercase tracking-[0.14em] ${kickerCls}`}>{kicker}</p>
+      <h3 className="relative mt-1.5 text-[13.5px] font-semibold leading-snug text-white/95">{headline}</h3>
+      {context && <p className="relative mt-1 text-[11.5px] leading-relaxed text-soft">{context}</p>}
+      {signal && (
+        <p className={`anim-pop-in relative mt-2.5 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold tabular-nums ${tone === "down" ? "border-rose-400/15 bg-rose-400/[0.05]" : tone === "up" ? "border-emerald-400/15 bg-emerald-400/[0.05]" : "border-violet-400/15 bg-violet-400/[0.05]"} ${signalCls}`}>
+          {signalIcon}{signal.text}
+        </p>
+      )}
+      {actionLabel && (
+        <span className="relative mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-violet-300/90 transition-all duration-200 group-hover:gap-1.5 group-hover:text-violet-200">
+          {actionLabel}<ArrowRight className="h-3 w-3" aria-hidden="true" />
+        </span>
+      )}
+    </>
   );
+  const cls = "group relative flex flex-col rounded-2xl border border-white/[0.06] bg-white/[0.02] p-4 pl-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.12] hover:bg-white/[0.035]";
+  const style = { animation: `fadeUp 0.45s ease both ${delay}ms` };
+  if (actionTo) {
+    return <Link to={actionTo} data-testid={testId} className={cls} style={style}>{inner}</Link>;
+  }
+  if (actionExt) {
+    return <a href={actionExt} target="_blank" rel="noreferrer" data-testid={testId} className={cls} style={style}>{inner}</a>;
+  }
+  return <div data-testid={testId} className={cls} style={style}>{inner}</div>;
 }
 
 /* ---------- Performance chart ---------- */
@@ -230,7 +213,7 @@ function Segmented<T extends string | number>({ options, value, onChange, format
           className={`min-h-[28px] whitespace-nowrap rounded-lg px-2.5 py-1 text-[11.5px] font-medium transition-all duration-150 ${
             value === o
               ? "bg-white/[0.08] text-white shadow-[inset_0_0_0_1px_rgba(139,92,246,0.28),0_0_14px_-4px_rgba(139,92,246,0.4)]"
-              : "text-soft hover:text-foreground"
+              : "text-soft hover:bg-white/[0.04] hover:text-foreground"
           }`}
         >
           {format(o)}
@@ -276,7 +259,7 @@ function PerformanceChart({ bundle, videos }: { bundle: ChannelBundle | null; vi
   const showYt = filter !== "x";
   const hasData = showYt && sliced.length > 1 && sliced.some((s) => s.views > 0);
 
-  const W = 800, H = 250, PADX = 6, TOP = 26, BOT = 26;
+  const W = 800, H = 300, PADX = 6, TOP = 28, BOT = 28;
   const max = Math.max(1, ...sliced.map((p) => p.views));
   const xAt = (i: number) => PADX + (i / Math.max(1, sliced.length - 1)) * (W - PADX * 2);
   const yAt = (v: number) => H - BOT - (v / max) * (H - TOP - BOT);
@@ -317,7 +300,7 @@ function PerformanceChart({ bundle, videos }: { bundle: ChannelBundle | null; vi
               Your current X API access does not provide post-level metrics.
             </p>
             <Link to="/integrations" className="mt-3 rounded-[10px] border border-white/[0.09] bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/85 transition-colors hover:bg-white/[0.08]"
-              data-testid="dashboard-x-upgrade-button">Upgrade X access</Link>
+              data-testid="dashboard-x-upgrade-button">View integration</Link>
           </div>
         ) : !hasData ? (
           <div className="flex min-h-[240px] flex-col items-center justify-center rounded-[16px] border border-dashed border-white/[0.08] bg-white/[0.012] py-14 text-center md:min-h-[280px]">
@@ -339,7 +322,7 @@ function PerformanceChart({ bundle, videos }: { bundle: ChannelBundle | null; vi
           </div>
         ) : (
           <div className="relative" onMouseLeave={() => setHoverIdx(null)}>
-            <svg viewBox={`0 0 ${W} ${H}`} className="h-[260px] w-full md:h-[320px]" role="img" aria-label="Performance trend chart">
+            <svg viewBox={`0 0 ${W} ${H}`} className="h-[300px] w-full md:h-[340px]" role="img" aria-label="Performance trend chart">
               <defs>
                 <linearGradient id="ytFill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="rgb(239,68,68)" stopOpacity="0.2" />
@@ -396,9 +379,9 @@ function PerformanceChart({ bundle, videos }: { bundle: ChannelBundle | null; vi
   );
 }
 
-/* ---------- Latest video row with intelligence ---------- */
+/* ---------- ranked content row ---------- */
 
-function VideoInsightRow({ ins, dominant = false }: { ins: VideoInsight; dominant?: boolean }) {
+function VideoInsightRow({ ins, rank, dominant = false }: { ins: VideoInsight; rank: number; dominant?: boolean }) {
   const { v, vph, deltaPct } = ins;
   const status = deltaPct === null ? null
     : deltaPct >= 15 ? "rocket"
@@ -407,12 +390,13 @@ function VideoInsightRow({ ins, dominant = false }: { ins: VideoInsight; dominan
   return (
     <li
       data-testid={dominant ? "dashboard-video-hero-row" : "dashboard-video-row"}
-      className={`group/row flex items-center gap-3.5 rounded-xl p-2.5 transition-colors duration-200 hover:bg-white/[0.035] ${dominant ? "bg-white/[0.02] ring-1 ring-white/[0.06]" : ""}`}
+      className={`group/row flex items-center gap-3.5 rounded-xl p-2.5 transition-all duration-200 hover:-translate-y-0.5 hover:bg-white/[0.035] ${dominant ? "bg-white/[0.02] ring-1 ring-white/[0.06]" : ""}`}
     >
+      <span className={`w-5 shrink-0 text-center text-[12px] font-semibold tabular-nums ${dominant ? "text-white" : "text-soft/70"}`}>{rank}</span>
       <div className="relative shrink-0">
         {v.thumbnail ? (
           <img src={v.thumbnail} alt="" loading="lazy"
-            className={`rounded-lg border border-white/[0.08] object-cover transition-transform duration-300 group-hover/row:scale-[1.04] ${dominant ? "h-[76px] w-[134px]" : "h-[58px] w-[102px]"}`} />
+            className={`rounded-lg border border-white/[0.08] object-cover shadow-[0_4px_16px_-6px_rgba(0,0,0,0.6)] transition-transform duration-300 group-hover/row:scale-[1.03] ${dominant ? "h-[76px] w-[134px]" : "h-[58px] w-[102px]"}`} />
         ) : (
           <div className={`flex items-center justify-center rounded-lg bg-white/[0.05] ${dominant ? "h-[76px] w-[134px]" : "h-[58px] w-[102px]"}`}><Film className="h-5 w-5 text-soft" aria-hidden="true" /></div>
         )}
@@ -428,7 +412,7 @@ function VideoInsightRow({ ins, dominant = false }: { ins: VideoInsight; dominan
         </div>
       </div>
       {status ? (
-        <span className={`hidden shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums sm:inline-flex ${
+        <span className={`anim-pop-in hidden shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums sm:inline-flex ${
           status === "rocket" ? "border-emerald-400/20 bg-emerald-400/[0.06] text-emerald-300"
           : status === "down" ? "border-rose-400/20 bg-rose-400/[0.06] text-rose-300"
           : "border-white/10 bg-white/[0.03] text-soft"
@@ -442,6 +426,18 @@ function VideoInsightRow({ ins, dominant = false }: { ins: VideoInsight; dominan
         </span>
       )}
     </li>
+  );
+}
+
+/* ---------- platform overview ---------- */
+
+function PlatformRow({ label, yt, x }: { label: string; yt: React.ReactNode; x: React.ReactNode }) {
+  return (
+    <div className="grid grid-cols-[88px_1fr_1fr] items-center gap-3 border-b border-white/[0.04] py-2.5 last:border-0 last:pb-0" data-testid="dashboard-platform-row">
+      <p className="text-[11.5px] text-soft">{label}</p>
+      <p className="flex items-center gap-1.5 text-[12px] font-medium tabular-nums text-white/90"><span className="text-red-400/90" aria-hidden="true">{YT_ICON}</span>{yt}</p>
+      <p className="flex items-center gap-1.5 text-[12px] font-medium tabular-nums text-white/90"><span className="text-white/60" aria-hidden="true">{X_SVG}</span>{x}</p>
+    </div>
   );
 }
 
@@ -516,6 +512,7 @@ export default function Dashboard() {
   }
 
   const strongTopic = latest && latest.deltaPct !== null && latest.deltaPct >= 10;
+  const latestVideoUrl = latest ? `https://www.youtube.com/watch?v=${latest.v.id}` : undefined;
 
   return (
     <div data-testid="dashboard-page" className="space-y-4">
@@ -525,22 +522,22 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-start justify-between gap-4" data-testid="dashboard-header" style={{ animation: "fadeUp .4s ease both" }}>
         <div>
           <h1 className="text-[19px] font-semibold tracking-tight text-white md:text-[21px]">Your content, at a glance.</h1>
-          <p className="mt-1 text-[12.5px] text-soft">See what is performing, what changed, and what deserves your attention.</p>
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px]" data-testid="dashboard-accounts-row">
-            <span className="inline-flex items-center gap-1.5 text-white/70">
+          <p className="mt-1 text-[12.5px] text-soft">See what&rsquo;s performing, what changed, and what deserves your attention.</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="dashboard-accounts-row">
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${ytAvailable ? "border-red-400/[0.14] bg-red-400/[0.04] text-white/80" : "border-white/[0.07] bg-white/[0.02] text-soft/60"}`}>
               <span className="text-red-400">{YT_ICON}</span>YouTube
-              <span className={ytAvailable ? "text-emerald-300" : "text-soft/50"} aria-hidden="true">✓</span>
-              <span className={ytAvailable ? "text-emerald-300/90" : "text-soft/50"}>{ytAvailable ? "Connected" : "Off"}</span>
+              <span className={ytAvailable ? "text-emerald-300" : "text-soft/50"}>{ytAvailable ? "Connected" : "Off"}</span>
             </span>
-            <span className="text-soft/30" aria-hidden="true">│</span>
-            <span className="inline-flex items-center gap-1.5 text-white/70">
+            <Link to="/integrations"
+              data-testid="dashboard-x-status-chip"
+              title="X is connected, but your current API access does not include post-level analytics"
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors ${profile ? "border-amber-400/[0.14] bg-amber-400/[0.035] text-white/80 hover:bg-amber-400/[0.07]" : "border-white/[0.07] bg-white/[0.02] text-soft/60"}`}>
               <span className="text-white/70">{X_SVG}</span>X
-              <span className={profile ? "text-amber-300" : "text-soft/50"} aria-hidden="true">✓</span>
               <span className={profile ? "text-amber-300/90" : "text-soft/50"}>{profile ? "Limited" : "Off"}</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 pl-1 text-soft" aria-live="polite" data-testid="dashboard-sync-status">
+            </Link>
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.06] bg-white/[0.02] px-2.5 py-1 text-[11px] text-soft" aria-live="polite" data-testid="dashboard-sync-status">
               <span className={`h-1.5 w-1.5 rounded-full ${syncing ? "animate-pulse bg-violet-400" : "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"}`} />
-              {syncing ? "Syncing…" : sinceSync < 1 ? "Synced just now" : `Synced ${sinceSync} min ago`}
+              {syncing ? "Syncing…" : sinceSync < 1 ? "Just now" : `${sinceSync} min ago`}
             </span>
           </div>
         </div>
@@ -556,81 +553,81 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* ---- KPI row ---- */}
+      {/* ---- KPI row: 2 primary + 2 secondary ---- */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="dashboard-kpi-grid">
-        <KpiCard label="YouTube Views" value={ytAvailable ? formatNum(ch!.totalViews) : "—"}
-          pct={views7dChange} periodLabel="prev 7 days" icon={<Eye className="h-3 w-3" aria-hidden="true" />}
+        <KpiCard primary label="YouTube Views" value={ytAvailable ? formatNum(ch!.totalViews) : "—"}
+          pct={views7dChange} comparisonLabel="prev 7 days" icon={<Eye className="h-3 w-3" aria-hidden="true" />}
           testId="dashboard-kpi-youtube-views" loading={!ytAvailable} noDataLabel="Lifetime total" />
-        <KpiCard label="Subscribers" value={ytAvailable ? formatNum(ch!.subscribers) : "—"}
-          pct={null} periodLabel="prev 7 days" icon={<Youtube className="h-3 w-3" aria-hidden="true" />}
+        <KpiCard primary label="Subscribers" value={ytAvailable ? formatNum(ch!.subscribers) : "—"}
+          pct={null} icon={<Youtube className="h-3 w-3" aria-hidden="true" />}
           testId="dashboard-kpi-subscribers" loading={!ytAvailable} noDataLabel="Current total" />
         <KpiCard label="Latest Video Views" value={latest ? formatNum(latestViews) : "—"}
-          pct={latestChange} periodLabel="recent video average" icon={<Film className="h-3 w-3" aria-hidden="true" />}
+          pct={latestChange} comparisonLabel="recent average" icon={<Film className="h-3 w-3" aria-hidden="true" />}
           testId="dashboard-kpi-latest-video-views" loading={!latest} noDataLabel="Current views" />
         <KpiCard label="YouTube Engagement" value={ytEngagement !== null ? `${ytEngagement.toFixed(1)}%` : "—"}
-          pct={ytEngChange} periodLabel="recent video average" icon={<Zap className="h-3 w-3" aria-hidden="true" />}
+          pct={ytEngChange} comparisonLabel="recent average" icon={<Zap className="h-3 w-3" aria-hidden="true" />}
           testId="dashboard-kpi-youtube-engagement" loading={videos.length === 0} noDataLabel="Channel lifetime rate" />
       </div>
 
-      {/* ---- Attention section ---- */}
+      {/* ---- Attention: editorial intelligence layer ---- */}
       <section data-testid="dashboard-attention-section" aria-label="What deserves your attention">
-        <div className="mb-2.5 flex items-center gap-2">
-          <Zap className="h-3.5 w-3.5 text-violet-300" aria-hidden="true" />
-          <h2 className="text-[14px] font-semibold tracking-tight text-white">What deserves your attention</h2>
+        <div className="mb-2.5 flex items-center gap-2.5">
+          <span className="relative flex h-6 w-6 items-center justify-center rounded-lg border border-violet-400/20 bg-violet-400/10">
+            <Zap className="h-3 w-3 text-violet-300 anim-pulse-soft" aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="text-[14.5px] font-semibold tracking-tight text-white">What deserves your attention</h2>
+            <p className="text-[11.5px] text-soft">A quick read of what&rsquo;s changing across your platforms.</p>
+          </div>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-          {latest && latestChange !== null && latestChange >= 10 ? (
-            <AttentionCard tone="up" icon={<Rocket className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="Latest video"
-              detail={`${latest.v.title} · ${formatNum(latestViews)} views`}
-              metric={`+${latestChange.toFixed(0)}% above your recent video average`}
-              testId="dashboard-attention-latest" delay={0} />
-          ) : latest && latestChange !== null && latestChange <= -15 ? (
-            <AttentionCard tone="down" icon={<TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="Latest video"
-              detail={`${latest.v.title} · ${formatNum(latestViews)} views`}
-              metric={`${Math.abs(latestChange).toFixed(0)}% below your recent video average`}
-              testId="dashboard-attention-latest" delay={0} />
+          {/* Insight 1 — latest video performance */}
+          {latest && latestChange !== null && latestChange <= -15 ? (
+            <InsightCard tone="down" kicker="High attention" headline={latest.v.title}
+              context={`${formatNum(latestViews)} views · ${formatDate(latest.v.publishedAt)}`}
+              signal={{ text: `${Math.abs(latestChange).toFixed(0)}% below recent average`, tone: "down" }}
+              actionLabel="View video" actionExt={latestVideoUrl} testId="dashboard-attention-latest" delay={0} />
+          ) : latest && latestChange !== null && latestChange >= 10 ? (
+            <InsightCard tone="up" kicker="Performance" headline={latest.v.title}
+              context={`${formatNum(latestViews)} views · ${formatDate(latest.v.publishedAt)}`}
+              signal={{ text: `${latestChange.toFixed(0)}% above recent average`, tone: "up" }}
+              actionLabel="View video" actionExt={latestVideoUrl} testId="dashboard-attention-latest" delay={0} />
           ) : latest && latestChange !== null ? (
-            <AttentionCard tone="topic" icon={<Sparkles className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="Latest video"
-              detail={`${latest.v.title} · ${formatNum(latestViews)} views`}
-              metric={`${latestChange >= 0 ? "+" : ""}${latestChange.toFixed(0)}% vs your recent video average`}
-              testId="dashboard-attention-latest" delay={0} />
+            <InsightCard tone="neutral" kicker="Performance" headline={latest.v.title}
+              context={`${formatNum(latestViews)} views · tracking your recent average`}
+              signal={{ text: `${latestChange >= 0 ? "+" : ""}${latestChange.toFixed(0)}% vs recent average`, tone: "neutral" }}
+              actionLabel="View video" actionExt={latestVideoUrl} testId="dashboard-attention-latest" delay={0} />
           ) : (
-            <AttentionCard tone="topic" icon={<BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="Building your baseline"
-              detail="More uploads are needed to compare videos against a reliable recent video average."
+            <InsightCard tone="neutral" kicker="Building your baseline" headline="Building your baseline"
+              context="More uploads are needed to identify reliable content trends."
               testId="dashboard-attention-latest" delay={0} />
           )}
+          {/* Insight 2 — opportunity */}
           {strongTopic ? (
-            <AttentionCard tone="topic" icon={<Flame className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="AI-agent content is your strongest recent topic"
-              detail="Your top-performing recent video covers building with AI agents."
-              metric={`${formatNum(latestViews)} views and climbing`}
+            <InsightCard tone="up" kicker="Opportunity" headline="AI-agent content is your strongest recent topic"
+              context="Your top-performing recent video covers building with AI agents."
+              signal={{ text: `${formatNum(latestViews)} views and climbing`, tone: "up" }}
               testId="dashboard-attention-topic" delay={60} />
           ) : (
-            <AttentionCard tone="topic" icon={<Flame className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="Building your baseline"
-              detail="Topic trends appear once more videos accumulate performance data."
+            <InsightCard tone="neutral" kicker="Opportunity" headline="Building your baseline"
+              context="Topic trends will appear once more videos accumulate performance data."
+              signal={{ text: "📊 Collecting data", tone: "neutral" }}
               testId="dashboard-attention-topic" delay={60} />
           )}
+          {/* Insight 3 — previous video comparison */}
           {previous && previous.deltaPct !== null && previous.deltaPct <= -15 ? (
-            <AttentionCard tone="down" icon={<TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="Previous video"
-              detail={previous.v.title}
-              metric={`${Math.abs(previous.deltaPct).toFixed(0)}% below your recent video average`}
+            <InsightCard tone="down" kicker="Comparison" headline={previous.v.title}
+              context={`Previous video · ${formatDate(previous.v.publishedAt)}`}
+              signal={{ text: `${Math.abs(previous.deltaPct).toFixed(0)}% below recent average`, tone: "down" }}
               testId="dashboard-attention-previous" delay={120} />
           ) : previous && previous.deltaPct !== null && previous.deltaPct >= 15 ? (
-            <AttentionCard tone="up" icon={<Rocket className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="Previous video"
-              detail={previous.v.title}
-              metric={`+${previous.deltaPct.toFixed(0)}% above your recent video average`}
+            <InsightCard tone="up" kicker="Comparison" headline={previous.v.title}
+              context={`Previous video · ${formatDate(previous.v.publishedAt)}`}
+              signal={{ text: `${previous.deltaPct.toFixed(0)}% above recent average`, tone: "up" }}
               testId="dashboard-attention-previous" delay={120} />
           ) : (
-            <AttentionCard tone="topic" icon={<BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="No underperformers detected"
-              detail="Your recent uploads are within the normal performance range."
+            <InsightCard tone="neutral" kicker="Comparison" headline="No underperformers detected"
+              context="Your recent uploads are within the normal performance range."
               testId="dashboard-attention-previous" delay={120} />
           )}
         </div>
@@ -639,72 +636,93 @@ export default function Dashboard() {
       {/* ---- Performance ---- */}
       <PerformanceChart bundle={bundle} videos={bundle?.videos} />
 
-      {/* ---- Latest Videos + X status ---- */}
-      <div className="grid gap-4 lg:grid-cols-5">
-        <section className="surface p-5 lg:col-span-3" data-testid="dashboard-youtube-section" aria-label="Latest videos">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="flex items-center gap-2 text-[14px] font-semibold tracking-tight text-white">
-                <span className="text-red-400">{YT_ICON}</span>Latest Videos
-              </h2>
-              <p className="mt-0.5 text-[11px] text-soft">Performance vs your channel average</p>
-            </div>
-            {insights.length > 0 && (
-              <span className="hidden items-center gap-1 text-[11px] text-soft sm:inline-flex">
-                <Clock className="h-3 w-3" aria-hidden="true" />views/hr
-              </span>
+      {/* ---- Top performing content: YouTube feed + X column ---- */}
+      <section aria-label="Top performing content" data-testid="dashboard-content-section">
+        <div className="mb-2.5 flex items-center gap-2.5">
+          <h2 className="text-[14.5px] font-semibold tracking-tight text-white">Top performing content</h2>
+          <p className="hidden text-[11.5px] text-soft sm:block">What&rsquo;s driving your numbers</p>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-5">
+          <div className="surface p-5 lg:col-span-3" data-testid="dashboard-youtube-section">
+            <h3 className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-soft">
+              <span className="text-red-400">{YT_ICON}</span>YouTube
+            </h3>
+            <ul className="mt-3 space-y-0.5" data-testid="dashboard-video-list">
+              {insights.map((ins, i) => <VideoInsightRow key={ins.v.id} ins={ins} rank={i + 1} dominant={i === 0} />)}
+              {insights.length === 0 && (
+                <li className="flex flex-col items-center rounded-xl border border-dashed border-white/[0.08] py-12 text-center">
+                  <Film className="h-5 w-5 text-soft" aria-hidden="true" />
+                  <p className="mt-2.5 text-[13px] text-white/80">No videos found</p>
+                  <p className="mt-0.5 text-[11px] text-soft">Uploads will appear here once available.</p>
+                </li>
+              )}
+            </ul>
+          </div>
+
+          <div className="surface flex flex-col p-5 lg:col-span-2" data-testid="dashboard-x-section">
+            <h3 className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-soft">
+              <span className="text-white/70">{X_SVG}</span>X
+            </h3>
+            {(tweets ?? []).length > 0 ? (
+              <>
+                <p className="mt-2 text-[11.5px] text-soft">Recent posts from @{profile?.username ?? "your account"}</p>
+                <ul className="mt-2 space-y-2" data-testid="dashboard-post-list">
+                  {(tweets ?? []).slice(0, 3).map((t, i) => (
+                    <li key={t.id} className="group/post flex items-start gap-2.5 rounded-xl border border-white/[0.04] bg-white/[0.015] p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.09]" data-testid="dashboard-post-row">
+                      <span className="w-4 shrink-0 text-center text-[11px] font-semibold tabular-nums text-soft/70">{i + 1}</span>
+                      <div className="min-w-0">
+                        <p className="line-clamp-2 text-[12px] leading-relaxed text-white/80 transition-colors group-hover/post:text-white">{t.text}</p>
+                        <p className="mt-1.5 text-[11px] tabular-nums text-soft">{formatDate(t.createdAt)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <div className="mt-3 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-white/[0.08] bg-white/[0.012] px-4 py-10 text-center">
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.06] text-white/60">{X_SVG}</span>
+                <p className="mt-2.5 text-[12.5px] font-medium text-white/85">X post analytics</p>
+                <p className="mt-1 max-w-[240px] text-[11px] leading-relaxed text-soft">
+                  Your account is connected, but post-level metrics are limited by your current X API access.
+                </p>
+                <Link to="/integrations" data-testid="dashboard-x-upgrade-button"
+                  className="mt-3 rounded-[10px] border border-white/[0.09] bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/85 transition-colors hover:bg-white/[0.08]">
+                  View integration
+                </Link>
+              </div>
+            )}
+            {profile && (
+              <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/[0.05] pt-3.5 text-center" data-testid="dashboard-x-profile-stats">
+                <div><p className="text-[14px] font-semibold tabular-nums text-white">{formatNum(profile.followers)}</p><p className="text-[10px] text-soft">Followers</p></div>
+                <div><p className="text-[14px] font-semibold tabular-nums text-white">{formatNum(profile.following)}</p><p className="text-[10px] text-soft">Following</p></div>
+                <div><p className="text-[14px] font-semibold tabular-nums text-white">{formatNum(profile.tweetCount)}</p><p className="text-[10px] text-soft">Posts</p></div>
+              </div>
             )}
           </div>
-          <ul className="mt-3 space-y-0.5" data-testid="dashboard-video-list">
-            {insights.map((ins, i) => <VideoInsightRow key={ins.v.id} ins={ins} dominant={i === 0} />)}
-            {insights.length === 0 && (
-              <li className="flex flex-col items-center rounded-xl border border-dashed border-white/[0.08] py-12 text-center">
-                <Film className="h-5 w-5 text-soft" aria-hidden="true" />
-                <p className="mt-2.5 text-[13px] text-white/80">No videos found</p>
-                <p className="mt-0.5 text-[11px] text-soft">Uploads will appear here once available.</p>
-              </li>
-            )}
-          </ul>
-        </section>
+        </div>
+      </section>
 
-        <section className="surface flex flex-col p-5 lg:col-span-2" data-testid="dashboard-x-section" aria-label="X status">
-          <h2 className="flex items-center gap-2 text-[14px] font-semibold tracking-tight text-white">
-            <span className="text-white/70">{X_SVG}</span>X Performance
-          </h2>
-          {(tweets ?? []).length > 0 ? (
-            <>
-              <p className="mt-0.5 text-[11px] text-soft">Recent posts from @{profile?.username ?? "your account"}</p>
-              <ul className="mt-3 space-y-2" data-testid="dashboard-post-list">
-                {(tweets ?? []).slice(0, 3).map((t) => (
-                  <li key={t.id} className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-3" data-testid="dashboard-post-row">
-                    <p className="line-clamp-2 text-[12px] leading-relaxed text-white/80">{t.text}</p>
-                    <p className="mt-1.5 text-[11px] tabular-nums text-soft">{formatDate(t.createdAt)}</p>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <div className="mt-4 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-white/[0.08] bg-white/[0.012] px-4 py-10 text-center">
-              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.06] text-white/60">{X_SVG}</span>
-              <p className="mt-2.5 text-[12.5px] font-medium text-white/85">X analytics unavailable</p>
-              <p className="mt-1 max-w-[240px] text-[11px] leading-relaxed text-soft">
-                Your current X API access does not provide post-level metrics.
-              </p>
-              <Link to="/integrations" data-testid="dashboard-x-upgrade-button"
-                className="mt-3 rounded-[10px] border border-white/[0.09] bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/85 transition-colors hover:bg-white/[0.08]">
-                Upgrade X access
-              </Link>
-            </div>
-          )}
-          {profile && (
-            <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/[0.05] pt-3.5 text-center" data-testid="dashboard-x-profile-stats">
-              <div><p className="text-[14px] font-semibold tabular-nums text-white">{formatNum(profile.followers)}</p><p className="text-[10px] text-soft">Followers</p></div>
-              <div><p className="text-[14px] font-semibold tabular-nums text-white">{formatNum(profile.following)}</p><p className="text-[10px] text-soft">Following</p></div>
-              <div><p className="text-[14px] font-semibold tabular-nums text-white">{formatNum(profile.tweetCount)}</p><p className="text-[10px] text-soft">Posts</p></div>
-            </div>
-          )}
-        </section>
-      </div>
+      {/* ---- Platform overview ---- */}
+      <section className="surface p-5" data-testid="dashboard-platform-overview" aria-label="Platform overview">
+        <div className="mb-1 flex items-center justify-between">
+          <h2 className="text-[14.5px] font-semibold tracking-tight text-white">Platform overview</h2>
+          <p className="text-[11.5px] text-soft">YouTube vs X</p>
+        </div>
+        <div className="mt-2">
+          <PlatformRow label="Audience"
+            yt={`${ytAvailable ? formatNum(ch!.subscribers) : "—"} subscribers`}
+            x={profile ? `${formatNum(profile.followers)} followers` : "—"} />
+          <PlatformRow label="Reach"
+            yt={`${ytAvailable ? formatNum(ch!.totalViews) : "—"} lifetime views`}
+            x={<span className="font-normal text-soft">Limited by API access</span>} />
+          <PlatformRow label="Content"
+            yt={`${videos.length} video${videos.length === 1 ? "" : "s"}`}
+            x={profile ? `${formatNum(profile.tweetCount)} posts` : "—"} />
+          <PlatformRow label="Engagement"
+            yt={ytEngagement !== null ? `${ytEngagement.toFixed(1)}% rate` : "—"}
+            x={<span className="font-normal text-soft">Not available</span>} />
+        </div>
+      </section>
     </div>
   );
 }
