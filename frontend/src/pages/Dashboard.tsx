@@ -5,62 +5,69 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { channel, videos, dailyViews, formatNum } from "@/features/youtube";
-
-const thumbGradients: Record<string, string> = {
-  grad1: "from-violet-500 to-blue-500",
-  grad2: "from-blue-500 to-cyan-400",
-  grad3: "from-purple-600 to-pink-500",
-  grad4: "from-amber-500 to-orange-500",
-  grad5: "from-emerald-500 to-teal-500",
-};
+import { ChannelStats, Video, AnalyticsData, fetchChannel, fetchVideos, fetchAnalytics, formatNum, formatDate } from "@/features/youtube";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<string>("");
+  const [channel, setChannel] = useState<ChannelStats | null>(null);
+  const [videos, setVideos] = useState<Video[]>([]);
+  const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
 
-  const load = () => {
+  const load = async () => {
     setRefreshing(true);
     setError(null);
-    // Simulated fetch — real YouTube proxy wiring is pending
-    setTimeout(() => {
-      try {
-        setLastSync(new Date().toLocaleTimeString());
-        setLoading(false);
-        setRefreshing(false);
-      } catch {
-        setError("Failed to load channel data. Please retry.");
-        setRefreshing(false);
-      }
-    }, 700);
+    try {
+      const [ch, vids, an] = await Promise.all([
+        fetchChannel(),
+        fetchVideos(),
+        fetchAnalytics().catch(() => null),
+      ]);
+      setChannel(ch);
+      setVideos(vids);
+      setAnalytics(an);
+      setLastSync(new Date().toLocaleTimeString());
+      setLoading(false);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to load channel data. Please retry.");
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   useEffect(() => { load(); }, []);
 
-  const maxViews = Math.max(...dailyViews.map(d => d.views));
+  const days = analytics?.days ?? [];
+  const maxViews = days.length ? Math.max(...days.map(d => d.views), 1) : 1;
 
-  const metrics = [
-    { label: "Subscribers", value: formatNum(channel.subscribers), delta: `+${channel.subsGained - channel.subsLost} this month`, icon: Users, grad: "from-violet-600 to-blue-500" },
-    { label: "Total Views", value: formatNum(channel.totalViews), delta: `+${formatNum(channel.viewsLast28)} in 28 days`, icon: Eye, grad: "from-blue-600 to-cyan-500" },
-    { label: "Videos", value: `${channel.videoCount}`, delta: "5 published recently", icon: Film, grad: "from-purple-600 to-pink-500" },
-    { label: "Watch Hours", value: formatNum(channel.watchHours), delta: `${channel.engagementRate}% engagement`, icon: Clock, grad: "from-amber-500 to-orange-500" },
-  ];
+  const metrics = channel ? [
+    { label: "Subscribers", value: formatNum(channel.subscribers), delta: "Live from YouTube", icon: Users, grad: "from-violet-600 to-blue-500" },
+    { label: "Total Views", value: formatNum(channel.totalViews), delta: "All-time views", icon: Eye, grad: "from-blue-600 to-cyan-500" },
+    { label: "Videos", value: `${channel.videoCount}`, delta: `${videos.length} recent loaded`, icon: Film, grad: "from-purple-600 to-pink-500" },
+    {
+      label: "Watch Minutes (14d)",
+      value: analytics?.available ? formatNum(analytics.totalWatchMinutes) : "—",
+      delta: analytics?.available ? "Last 14 days" : (analytics?.message ?? "Unavailable"),
+      icon: Clock,
+      grad: "from-amber-500 to-orange-500",
+    },
+  ] : [];
 
   if (error && !loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]" aria-live="polite">
         <Card className="p-8 text-center max-w-md">
           <p className="text-red-500 font-medium mb-4">{error}</p>
-          <Button onClick={load}><RefreshCw className="w-4 h-4 mr-2" />Retry</Button>
+          <Button onClick={load} data-testid="dashboard-retry-button"><RefreshCw className="w-4 h-4 mr-2" aria-hidden="true" />Retry</Button>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6" aria-live="polite">
+    <div className="space-y-6" aria-live="polite" data-testid="dashboard-page">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -69,18 +76,18 @@ const Dashboard = () => {
             Channel Dashboard
           </h1>
           <p className="text-muted-foreground mt-1">
-            {channel.channelName} · {channel.handle}
+            {channel ? `${channel.channelName} · ${channel.handle ?? ""}` : "Loading channel…"}
             {lastSync && <span className="ml-2 text-xs">Synced {lastSync}</span>}
           </p>
         </div>
-        <Button onClick={load} disabled={refreshing} aria-label="Refresh channel statistics">
-          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+        <Button onClick={load} disabled={refreshing} aria-label="Refresh channel statistics" data-testid="dashboard-refresh-button">
+          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`} aria-hidden="true" />
           {refreshing ? "Syncing…" : "Refresh"}
         </Button>
       </div>
 
       {/* Metric cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="dashboard-metrics">
         {loading
           ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)
           : metrics.map(m => (
@@ -105,19 +112,23 @@ const Dashboard = () => {
 
       {/* Chart + latest videos */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        <Card className="lg:col-span-3 rounded-2xl border-0 shadow-md bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl">
-          <CardHeader><CardTitle className="text-lg">Views — last 28 days</CardTitle></CardHeader>
+        <Card className="lg:col-span-3 rounded-2xl border-0 shadow-md bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl" data-testid="dashboard-views-chart">
+          <CardHeader><CardTitle className="text-lg">Views — last 14 days</CardTitle></CardHeader>
           <CardContent>
-            {loading ? <Skeleton className="h-56 rounded-xl" /> : (
-              <div className="flex items-end gap-2 md:gap-3 h-56" role="img" aria-label="Bar chart of daily views over the last 28 days">
-                {dailyViews.map(d => (
+            {loading ? <Skeleton className="h-56 rounded-xl" /> : !analytics?.available ? (
+              <div className="h-56 flex items-center justify-center text-sm text-muted-foreground text-center px-6">
+                {analytics?.message ?? "Daily view history is not available right now."}
+              </div>
+            ) : (
+              <div className="flex items-end gap-2 md:gap-3 h-56" role="img" aria-label="Bar chart of daily views over the last 14 days">
+                {days.map(d => (
                   <div key={d.day} className="flex-1 flex flex-col items-center gap-2 group">
                     <span className="text-[10px] font-medium opacity-0 group-hover:opacity-100 transition-opacity">{formatNum(d.views)}</span>
                     <div
                       className="w-full rounded-t-lg bg-gradient-to-t from-violet-600 to-blue-400 transition-all duration-300 group-hover:from-violet-500 group-hover:to-cyan-400"
-                      style={{ height: `${(d.views / maxViews) * 180}px` }}
+                      style={{ height: `${Math.max((d.views / maxViews) * 180, 2)}px` }}
                     />
-                    <span className="text-[10px] text-muted-foreground hidden md:block">{d.day.split(" ")[1]}</span>
+                    <span className="text-[10px] text-muted-foreground hidden md:block">{d.day.slice(5)}</span>
                   </div>
                 ))}
               </div>
@@ -125,7 +136,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2 rounded-2xl border-0 shadow-md bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl">
+        <Card className="lg:col-span-2 rounded-2xl border-0 shadow-md bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl" data-testid="dashboard-latest-videos">
           <CardHeader>
             <CardTitle className="text-lg">Latest videos</CardTitle>
           </CardHeader>
@@ -134,9 +145,11 @@ const Dashboard = () => {
               ? Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)
               : videos.slice(0, 4).map(v => (
                 <div key={v.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                  <div className={`w-16 h-10 rounded-lg shrink-0 flex items-center justify-center text-white text-[10px] bg-gradient-to-br ${thumbGradients[v.thumbnail]}`}>
-                    {v.duration}
-                  </div>
+                  {v.thumbnail ? (
+                    <img src={v.thumbnail} alt="" className="w-16 h-10 rounded-lg object-cover shrink-0" aria-hidden="true" />
+                  ) : (
+                    <PlayCircle className="w-8 h-8 text-violet-500 shrink-0" aria-hidden="true" />
+                  )}
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{v.title}</p>
                     <p className="text-xs text-muted-foreground flex items-center gap-2">
@@ -158,7 +171,7 @@ const Dashboard = () => {
       </div>
 
       {/* Activity table */}
-      <Card className="rounded-2xl border-0 shadow-md bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl">
+      <Card className="rounded-2xl border-0 shadow-md bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl" data-testid="dashboard-recent-activity">
         <CardHeader><CardTitle className="text-lg">Recent activity</CardTitle></CardHeader>
         <CardContent>
           {loading ? <Skeleton className="h-48 rounded-xl" /> : (
@@ -178,7 +191,7 @@ const Dashboard = () => {
                   {videos.map(v => (
                     <tr key={v.id} className="border-b last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                       <td className="py-3 pr-4 font-medium max-w-[240px] truncate">{v.title}</td>
-                      <td className="py-3 hidden md:table-cell text-muted-foreground">{v.publishedAt}</td>
+                      <td className="py-3 hidden md:table-cell text-muted-foreground">{formatDate(v.publishedAt)}</td>
                       <td className="py-3 text-right font-medium">{v.views.toLocaleString()}</td>
                       <td className="py-3 text-right hidden sm:table-cell text-muted-foreground">{v.likes.toLocaleString()}</td>
                       <td className="py-3 text-right hidden lg:table-cell text-muted-foreground">{v.comments.toLocaleString()}</td>
