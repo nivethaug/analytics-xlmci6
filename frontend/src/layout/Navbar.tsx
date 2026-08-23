@@ -1,10 +1,9 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, BarChart3, Plug, Settings, Youtube, Twitter, Menu, X } from "lucide-react";
+import { LayoutDashboard, Plug, Settings, Youtube, Twitter, Menu, X } from "lucide-react";
 
 const links = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
-  { to: "/analytics", label: "Analytics", icon: BarChart3, end: false },
   { to: "/x", label: "X (Twitter)", icon: Twitter, end: false },
   { to: "/integrations", label: "Integrations", icon: Plug, end: false },
   { to: "/settings", label: "Settings", icon: Settings, end: false },
@@ -16,11 +15,18 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/60 dark:border-slate-800/60 bg-white/70 dark:bg-slate-950/70 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4 md:px-6 flex items-center justify-between h-16">
-        <NavLink to="/" className="flex items-center gap-2 font-bold text-lg">
-          <span className="p-1.5 rounded-lg bg-gradient-to-br from-red-600 to-rose-500 text-white">
-            <Youtube className="w-5 h-5" aria-hidden="true" />
+        <NavLink to="/" className="flex items-center gap-2.5" data-testid="navbar-brand">
+          <span className="flex -space-x-1.5" aria-hidden="true">
+            <span className="p-1.5 rounded-lg bg-gradient-to-br from-red-600 to-rose-500 text-white shadow-sm shadow-red-500/30">
+              <Youtube className="w-4 h-4" aria-hidden="true" />
+            </span>
+            <span className="p-1.5 rounded-lg bg-black text-white dark:bg-white dark:text-black shadow-sm">
+              <Twitter className="w-4 h-4" aria-hidden="true" />
+            </span>
           </span>
-          <span className="bg-gradient-to-r from-violet-600 to-blue-500 bg-clip-text text-transparent">Analytics</span>
+          <span className="font-bold text-base md:text-lg bg-gradient-to-r from-violet-600 via-fuchsia-500 to-blue-500 bg-clip-text text-transparent">
+            My X &amp; YouTube Stats
+          </span>
         </NavLink>
 
         {/* Desktop nav */}
@@ -30,9 +36,12 @@ const Navbar = () => {
               key={l.to}
               to={l.to}
               end={l.end}
+              data-testid={`navbar-link-${l.label.toLowerCase().split(" ")[0].replace(/[^a-z]/g, "")}`}
               className={({ isActive }) =>
-                `flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 min-h-[44px] ${
-                  isActive ? "bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300" : "text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
+                `flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 min-h-[44px] ${
+                  isActive
+                    ? "bg-gradient-to-r from-violet-100 to-blue-100 dark:from-violet-900/40 dark:to-blue-900/40 text-violet-700 dark:text-violet-300 shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
                 }`
               }
             >
@@ -47,6 +56,7 @@ const Navbar = () => {
           onClick={() => setOpen(!open)}
           aria-label={open ? "Close menu" : "Open menu"}
           aria-expanded={open}
+          data-testid="sidebar-toggle-button"
         >
           {open ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
         </button>
@@ -65,7 +75,7 @@ const Navbar = () => {
               end={l.end}
               onClick={() => setOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium min-h-[44px] transition-colors ${
+                `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium min-h-[44px] transition-colors ${
                   isActive ? "bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300" : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
                 }`
               }
