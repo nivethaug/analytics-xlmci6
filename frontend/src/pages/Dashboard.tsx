@@ -72,8 +72,8 @@ function periodChange(days: { day: string; views: number }[] | undefined, n: num
 function DeltaBadge({ pct, periodLabel, noDataLabel = "No history yet" }: { pct: number | null; periodLabel: string; noDataLabel?: string }) {
   if (pct === null) {
     return (
-      <p className="mt-1.5 flex items-center gap-1 text-[10.5px] text-soft/70">
-        <Minus className="h-3 w-3" aria-hidden="true" />{noDataLabel}
+      <p className={`mt-1.5 flex items-center gap-1 text-[10.5px] text-soft/70 ${noDataLabel === "No history yet" ? "" : "font-medium"}`}>
+        {noDataLabel === "No history yet" && <Minus className="h-3 w-3" aria-hidden="true" />}{noDataLabel}
       </p>
     );
   }
@@ -361,11 +361,11 @@ function VideoInsightRow({ ins, dominant = false }: { ins: VideoInsight; dominan
           : "border-white/10 bg-white/[0.03] text-soft"
         }`}>
           {status === "rocket" ? <Rocket className="h-3 w-3" aria-hidden="true" /> : status === "down" ? <TrendingDown className="h-3 w-3" aria-hidden="true" /> : <Minus className="h-3 w-3" aria-hidden="true" />}
-          {deltaPct! >= 0 ? `${deltaPct!.toFixed(0)}% above` : `${Math.abs(deltaPct!).toFixed(0)}% below`} avg
+          {deltaPct! >= 0 ? `${deltaPct!.toFixed(0)}% above recent average` : `${Math.abs(deltaPct!).toFixed(0)}% below recent average`}
         </span>
       ) : (
         <span className="hidden shrink-0 items-center rounded-full border border-white/[0.07] bg-white/[0.02] px-2 py-0.5 text-[10px] text-soft/70 sm:inline-flex">
-          Not enough data yet
+          📊 Not enough data yet
         </span>
       )}
     </li>
@@ -487,16 +487,16 @@ export default function Dashboard() {
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="dashboard-kpi-grid">
         <KpiCard label="YouTube Views" value={ytAvailable ? formatNum(ch!.totalViews) : "—"}
           pct={views7dChange} periodLabel="prev 7 days" icon={<Eye className="h-3 w-3" aria-hidden="true" />}
-          testId="dashboard-kpi-youtube-views" loading={!ytAvailable} />
+          testId="dashboard-kpi-youtube-views" loading={!ytAvailable} noDataLabel="Lifetime total" />
         <KpiCard label="Subscribers" value={ytAvailable ? formatNum(ch!.subscribers) : "—"}
           pct={null} periodLabel="prev 7 days" icon={<Youtube className="h-3 w-3" aria-hidden="true" />}
           testId="dashboard-kpi-subscribers" loading={!ytAvailable} noDataLabel="Current total" />
         <KpiCard label="Latest Video Views" value={latest ? formatNum(latestViews) : "—"}
-          pct={latestChange} periodLabel="recent avg" icon={<Film className="h-3 w-3" aria-hidden="true" />}
-          testId="dashboard-kpi-latest-video-views" loading={!latest} />
+          pct={latestChange} periodLabel="recent video average" icon={<Film className="h-3 w-3" aria-hidden="true" />}
+          testId="dashboard-kpi-latest-video-views" loading={!latest} noDataLabel="Current views" />
         <KpiCard label="YouTube Engagement" value={ytEngagement !== null ? `${ytEngagement.toFixed(1)}%` : "—"}
-          pct={ytEngChange} periodLabel="recent avg" icon={<Zap className="h-3 w-3" aria-hidden="true" />}
-          testId="dashboard-kpi-youtube-engagement" loading={videos.length === 0} noDataLabel="Current total" />
+          pct={ytEngChange} periodLabel="recent video average" icon={<Zap className="h-3 w-3" aria-hidden="true" />}
+          testId="dashboard-kpi-youtube-engagement" loading={videos.length === 0} noDataLabel="Channel lifetime rate" />
       </div>
 
       {/* ---- Attention section ---- */}
@@ -508,26 +508,26 @@ export default function Dashboard() {
         <div className="grid gap-3 md:grid-cols-3">
           {latest && latestChange !== null && latestChange >= 10 ? (
             <AttentionCard tone="up" icon={<Rocket className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="Latest video is outperforming your average"
-              detail={latest.v.title}
-              metric={`+${latestChange.toFixed(0)}% vs recent average`}
+              title="Latest video"
+              detail={`${latest.v.title} · ${formatNum(latestViews)} views`}
+              metric={`+${latestChange.toFixed(0)}% above your recent video average`}
               testId="dashboard-attention-latest" delay={0} />
           ) : latest && latestChange !== null && latestChange <= -15 ? (
             <AttentionCard tone="down" icon={<TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="Latest video is underperforming"
-              detail={latest.v.title}
-              metric={`${Math.abs(latestChange).toFixed(0)}% below your recent average`}
+              title="Latest video"
+              detail={`${latest.v.title} · ${formatNum(latestViews)} views`}
+              metric={`${Math.abs(latestChange).toFixed(0)}% below your recent video average`}
               testId="dashboard-attention-latest" delay={0} />
           ) : latest && latestChange !== null ? (
             <AttentionCard tone="topic" icon={<Sparkles className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="Latest video is tracking your average"
-              detail={latest.v.title}
-              metric={`${latestChange >= 0 ? "+" : ""}${latestChange.toFixed(0)}% vs recent average`}
+              title="Latest video"
+              detail={`${latest.v.title} · ${formatNum(latestViews)} views`}
+              metric={`${latestChange >= 0 ? "+" : ""}${latestChange.toFixed(0)}% vs your recent video average`}
               testId="dashboard-attention-latest" delay={0} />
           ) : (
             <AttentionCard tone="topic" icon={<BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="Building history"
-              detail={latest ? "Keep publishing — more data is needed to identify reliable trends." : "Keep publishing to unlock performance insights."}
+              title="Building your baseline"
+              detail="More uploads are needed to compare videos against a reliable recent video average."
               testId="dashboard-attention-latest" delay={0} />
           )}
           {strongTopic ? (
@@ -538,21 +538,21 @@ export default function Dashboard() {
               testId="dashboard-attention-topic" delay={60} />
           ) : (
             <AttentionCard tone="topic" icon={<Flame className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="Keep publishing consistently"
-              detail="Topic trends emerge once more videos accumulate performance data."
+              title="Building your baseline"
+              detail="Topic trends appear once more videos accumulate performance data."
               testId="dashboard-attention-topic" delay={60} />
           )}
           {previous && previous.deltaPct !== null && previous.deltaPct <= -15 ? (
             <AttentionCard tone="down" icon={<TrendingDown className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="Previous video is underperforming"
+              title="Previous video"
               detail={previous.v.title}
-              metric={`${Math.abs(previous.deltaPct).toFixed(0)}% below your recent average`}
+              metric={`${Math.abs(previous.deltaPct).toFixed(0)}% below your recent video average`}
               testId="dashboard-attention-previous" delay={120} />
           ) : previous && previous.deltaPct !== null && previous.deltaPct >= 15 ? (
             <AttentionCard tone="up" icon={<Rocket className="h-3.5 w-3.5" aria-hidden="true" />}
-              title="Previous video is still gaining"
+              title="Previous video"
               detail={previous.v.title}
-              metric={`+${previous.deltaPct.toFixed(0)}% above your recent average`}
+              metric={`+${previous.deltaPct.toFixed(0)}% above your recent video average`}
               testId="dashboard-attention-previous" delay={120} />
           ) : (
             <AttentionCard tone="topic" icon={<BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />}
