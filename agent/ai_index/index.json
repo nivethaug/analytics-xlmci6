@@ -1,0 +1,28 @@
+{
+  "project": "analytics",
+  "project_id": 2015,
+  "description": "YouTube channel analytics dashboard (UI-only, mock data; YouTube proxy wiring pending)",
+  "routes": [
+    { "path": "/", "page": "Dashboard" },
+    { "path": "/analytics", "page": "Analytics" },
+    { "path": "/integrations", "page": "Integrations" },
+    { "path": "/settings", "page": "Settings" },
+    { "path": "*", "page": "NotFound" }
+  ],
+  "files": [
+    { "path": "src/App.tsx", "type": "app", "lines": 36, "purpose": "Router: all routes wrapped in Layout, single root -> Dashboard" },
+    { "path": "src/layout/Layout.tsx", "type": "layout", "lines": 20, "purpose": "Renders Navbar + main Outlet" },
+    { "path": "src/layout/Navbar.tsx", "type": "component", "purpose": "Responsive top nav with NavLink to Dashboard/Analytics/Integrations/Settings, mobile hamburger" },
+    { "path": "src/pages/Dashboard.tsx", "type": "page", "purpose": "4 KPI metric cards (subscribers, views, videos, watch time), line chart of daily views, latest 5 videos table, loading skeletons" },
+    { "path": "src/pages/Analytics.tsx", "type": "page", "purpose": "Bar/line/pie charts, date range filter, metric cards, CSV export, refresh" },
+    { "path": "src/pages/Integrations.tsx", "type": "page", "purpose": "Connected services cards (YouTube connected via platform proxy), connect/disconnect UI" },
+    { "path": "src/pages/Settings.tsx", "type": "page", "purpose": "Tabbed settings (Profile, Security, Preferences), validation, toast on save" },
+    { "path": "src/features/youtube.ts", "type": "feature", "purpose": "Types + mock YouTube channel/videos/dailyViews data, formatters" }
+  ],
+  "integrations": { "youtube": { "status": "connected", "access": "platform-proxy", "usedInApp": false } },
+  "pendingBackend": [
+    "GET youtube channel stats + latest 5 videos via platform proxy (https://api.dreamagent.cloud/api/integrations/proxy, X-Project-Id: 2015)",
+    "Settings persistence endpoint",
+    "Integrations real connection state"
+  ]
+}
