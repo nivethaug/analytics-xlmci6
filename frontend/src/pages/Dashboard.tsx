@@ -159,22 +159,21 @@ function MetricCell({ label, value, pct, comparisonLabel, noDataLabel, icon, tes
 
 type InsightTone = "up" | "down" | "neutral";
 
-function InsightCard({ kicker, headline, context, signal, tone, actionLabel, actionTo, actionExt, testId, delay, weight = "default", statusLine }:
+function InsightCard({ kicker, headline, context, signal, tone, actionLabel, actionTo, actionExt, testId, delay, weight = "default", statusLine, thumb }:
   {
     kicker: string; headline: string; context?: string; signal?: { text: string; tone: InsightTone };
     actionLabel?: string; actionTo?: string; actionExt?: string; testId: string; delay: number;
-    weight?: "primary" | "default" | "quiet"; statusLine?: string;
+    weight?: "primary" | "default" | "quiet"; statusLine?: string; thumb?: string;
   }) {
   const kickerCls = tone === "down" ? "text-rose-300/80" : tone === "up" ? "text-emerald-300/80" : "text-violet-300/80";
   const signalCls = tone === "down" ? "text-rose-300" : tone === "up" ? "text-emerald-300" : "text-violet-300";
   const signalIcon = tone === "down" ? <ArrowDownRight className="h-3.5 w-3.5" aria-hidden="true" />
     : tone === "up" ? <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
     : <BarChart3 className="h-3.5 w-3.5" aria-hidden="true" />;
-  const inner = (
+  const copy = (
     <>
-      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/[0.035] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
       <p className={`relative text-[10px] font-semibold uppercase tracking-[0.14em] ${kickerCls}`}>{kicker}</p>
-      <h3 className={`relative mt-1.5 font-semibold leading-snug text-white/95 ${weight === "primary" ? "text-[14.5px]" : weight === "quiet" ? "text-[13px] text-white/85" : "text-[13.5px]"}`}>{headline}</h3>
+      <h3 className={`relative mt-1.5 font-semibold leading-snug text-white/95 ${weight === "primary" ? "text-[15px]" : weight === "quiet" ? "text-[13px] text-white/85" : "text-[13.5px]"}`}>{headline}</h3>
       {context && <p className="relative mt-1 text-[11.5px] leading-relaxed text-soft">{context}</p>}
       {signal && (
         <p className={`anim-pop-in relative mt-2.5 inline-flex items-center gap-1.5 text-[11.5px] font-semibold tabular-nums ${signalCls}`}>
@@ -195,6 +194,27 @@ function InsightCard({ kicker, headline, context, signal, tone, actionLabel, act
         <span className={`relative inline-flex items-center gap-1 text-[11.5px] font-medium text-violet-300/90 transition-all duration-200 group-hover:gap-1.5 group-hover:text-violet-200 ${weight === "primary" ? "mt-3" : "mt-2.5"}`}>
           {actionLabel}<ArrowRight className="h-3 w-3" aria-hidden="true" />
         </span>
+      )}
+    </>
+  );
+  const inner = (
+    <>
+      <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-b from-white/[0.035] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+      {weight === "primary" ? (
+        <div className="relative flex items-center gap-4">
+          {thumb ? (
+            <img src={thumb} alt="" loading="lazy"
+              className="h-[84px] w-[150px] shrink-0 rounded-xl object-cover shadow-[0_6px_18px_-8px_rgba(0,0,0,0.7)] transition-transform duration-300 group-hover:scale-[1.03] sm:h-[96px] sm:w-[170px]" />
+          ) : (
+            <svg viewBox="0 0 150 84" className="h-[84px] w-[150px] shrink-0 rounded-xl bg-white/[0.02] sm:h-[96px] sm:w-[170px]" aria-hidden="true" preserveAspectRatio="none">
+              <path d="M0,64 C18,58 26,66 42,54 C58,42 66,50 84,36 C102,22 112,30 130,16 L150,8"
+                fill="none" stroke="rgb(251,113,133)" strokeWidth="1.6" strokeLinecap="round" opacity="0.6" />
+            </svg>
+          )}
+          <div className="min-w-0 flex-1">{copy}</div>
+        </div>
+      ) : (
+        copy
       )}
     </>
   );
@@ -604,13 +624,14 @@ export default function Dashboard() {
             <p className="text-[11.5px] text-soft">A quick read of what&rsquo;s changing across your platforms.</p>
           </div>
         </div>
-        <div className="grid gap-3 lg:grid-cols-[1.7fr_1fr]">
+        <div className="grid items-start gap-3 lg:grid-cols-[1.75fr_1fr]">
           {/* Insight 1 — latest video performance */}
           {latest && latestChange !== null && latestChange <= -15 ? (
             <InsightCard tone="down" weight="primary" kicker="High attention" headline={latest.v.title}
               context={`${formatNum(latestViews)} views · ${formatDate(latest.v.publishedAt)}`}
               signal={{ text: `${Math.abs(latestChange).toFixed(0)}% below recent average`, tone: "down" }}
-              actionLabel="View video" actionExt={latestVideoUrl} testId="dashboard-attention-latest" delay={0} />
+              actionLabel="View video" actionExt={latestVideoUrl} testId="dashboard-attention-latest" delay={0}
+              thumb={latest.v.thumbnail || undefined} />
           ) : latest && latestChange !== null && latestChange >= 10 ? (
             <InsightCard tone="up" kicker="Performance" headline={latest.v.title}
               context={`${formatNum(latestViews)} views · ${formatDate(latest.v.publishedAt)}`}
