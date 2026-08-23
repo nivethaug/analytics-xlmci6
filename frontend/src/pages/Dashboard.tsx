@@ -48,42 +48,37 @@ interface PrimaryKpiProps {
   label: string;
   value: string | undefined;
   platform: Platform;
-  icon: React.ReactNode;
   spark?: number[];
   sub?: string;
 }
 
-function PrimaryKpi({ label, value, platform, icon, spark, sub }: PrimaryKpiProps) {
+function PrimaryKpi({ label, value, platform, spark, sub }: PrimaryKpiProps) {
   const stroke = platform === "yt" ? "rgb(248,113,113)" : platform === "x" ? "rgba(255,255,255,0.75)" : "rgb(167,139,250)";
   return (
     <div
       data-testid={`dashboard-kpi-${label.toLowerCase().replace(/[^a-z]+/g, "-")}`}
-      className="surface surface-hover group relative overflow-hidden p-5"
+      className="surface surface-hover group relative flex h-full flex-col justify-between overflow-hidden bg-gradient-to-b from-white/[0.03] to-transparent p-4 pb-3.5"
     >
       <div className={`absolute left-0 top-0 h-full w-px ${accent[platform].bar} opacity-40 transition-opacity duration-300 group-hover:opacity-100`} aria-hidden="true" />
-      <div className="flex items-start justify-between">
-        <div className="min-w-0">
-          <p className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] ${accent[platform].text}`}>
-            <span className="inline-block h-1 w-1 rounded-full bg-current" aria-hidden="true" />
-            {platformLabel[platform]}
-          </p>
-          <p className="mt-1 text-[12px] text-soft">{label}</p>
-        </div>
-        <span className={`flex h-7 w-7 items-center justify-center rounded-lg border ${accent[platform].chip}`}>{icon}</span>
-      </div>
-      <div className="mt-3 flex items-end justify-between gap-3">
-        {value === undefined ? (
-          <Skeleton className="h-10 w-24" />
-        ) : (
-          <p className="text-[34px] font-semibold leading-none tracking-tight text-white tabular-nums">{value}</p>
-        )}
+      <div className="flex items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-soft">
+          <span className={`inline-block h-1.5 w-1.5 rounded-full ${accent[platform].bar}`} aria-hidden="true" />
+          {label}
+        </p>
         {spark && spark.length > 1 && (
-          <div className="w-24 shrink-0 opacity-50 transition-opacity duration-300 group-hover:opacity-100">
+          <div className="w-20 shrink-0 opacity-45 transition-opacity duration-300 group-hover:opacity-90">
             <Sparkline values={spark} color={stroke} />
           </div>
         )}
       </div>
-      {sub && <p className="mt-2 text-[11px] text-soft/80">{sub}</p>}
+      <div className="mt-2 flex items-baseline">
+        {value === undefined ? (
+          <Skeleton className="h-10 w-24" />
+        ) : (
+          <p className="text-[38px] font-semibold leading-none tracking-tight text-white tabular-nums">{value}</p>
+        )}
+      </div>
+      <p className={`mt-2 text-[11px] ${accent[platform].text} opacity-70`}>{platformLabel[platform]}{sub ? <span className="text-soft/60"> · {sub}</span> : ""}</p>
     </div>
   );
 }
@@ -94,7 +89,7 @@ function SecondaryKpi({ label, value, platform, delay = 0 }: { label: string; va
   return (
     <div
       data-testid={`dashboard-kpi-${label.toLowerCase().replace(/[^a-z]+/g, "-")}`}
-      className="group flex items-center justify-between gap-3 rounded-xl border border-white/[0.05] bg-white/[0.02] px-4 py-3 transition-all duration-200 hover:border-white/[0.1] hover:bg-white/[0.035]"
+      className="flex items-center justify-between gap-3 px-4 py-3.5"
       style={{ animation: `fadeUp 0.45s ease both ${delay}ms` }}
     >
       <div className="flex min-w-0 items-center gap-2">
@@ -173,7 +168,7 @@ function PerformanceChart({ bundle }: { bundle: ChannelBundle | null }) {
 
   return (
     <section className="surface overflow-hidden" data-testid="dashboard-performance-section" aria-label="Performance overview">
-      <div className="flex flex-wrap items-start justify-between gap-3 p-5 md:p-6 pb-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 p-5 pb-0">
         <div>
           <h2 className="text-[15px] font-semibold tracking-tight text-white">Performance</h2>
           <p className="mt-0.5 text-[12px] text-soft">Views &amp; impressions across your connected platforms</p>
@@ -461,17 +456,18 @@ export default function Dashboard() {
     : "Your social performance at a glance";
 
   return (
-    <div data-testid="dashboard-page" className="space-y-6 md:space-y-8">
+    <div data-testid="dashboard-page" className="space-y-4">
       <style>{`@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }`}</style>
 
       {/* ---- Page header ---- */}
-      <div className="flex flex-wrap items-start justify-between gap-4" data-testid="dashboard-header" style={{ animation: "fadeUp .5s ease both" }}>
+      <div className="flex flex-wrap items-center justify-between gap-4" data-testid="dashboard-header" style={{ animation: "fadeUp .4s ease both" }}>
         <div>
-          <h1 className="text-[24px] font-semibold tracking-tight text-white md:text-[30px]">
+          <h1 className="text-[19px] font-semibold tracking-tight text-white md:text-[21px]">
             {greeting} <span aria-hidden="true">👋</span>
+            <span className="mx-2 text-white/15" aria-hidden="true">/</span>
+            <span className="text-[15px] font-medium text-white/70 md:text-[16px]">{heroSub}</span>
           </h1>
-          <p className="mt-1.5 text-[15px] font-medium text-white/75 md:text-[16px]">{heroSub}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-1.5 text-[12px] text-soft" data-testid="dashboard-accounts-row">
+          <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-1 text-[11.5px] text-soft" data-testid="dashboard-accounts-row">
             <span className={ytAvailable ? "inline-flex items-center gap-1.5 text-white/70" : "inline-flex items-center gap-1.5"}>
               <span className="text-red-400">{YT_ICON}</span>YouTube<span className="text-soft/50">·</span>
               <span className="text-white/55">{ch?.channelHandle || ch?.channelName || "not connected"}</span>
@@ -500,14 +496,17 @@ export default function Dashboard() {
 
       {/* ---- Primary metrics ---- */}
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" data-testid="dashboard-kpi-grid">
-        <PrimaryKpi label="YouTube Views" value={ytAvailable ? formatNum(ch!.totalViews) : "—"} platform="yt" icon={<Eye className="h-3.5 w-3.5" />} spark={sparkYt} sub="All-time channel views" />
-        <PrimaryKpi label="Subscribers" value={ytAvailable ? formatNum(ch!.subscribers) : "—"} platform="yt" icon={<Users className="h-3.5 w-3.5" />} sub="Channel subscribers" />
-        <PrimaryKpi label="X Followers" value={xAvailable ? formatNum(profile!.followers) : "—"} platform="x" icon={<Users className="h-3.5 w-3.5" />} sub={`@${profile?.username ?? "—"}`} />
-        <PrimaryKpi label="Combined Reach" value={formatNum(tweetMetrics.views)} platform="brand" icon={<Activity className="h-3.5 w-3.5" />} sub="Views + impressions across platforms" />
+        <PrimaryKpi label="Views" value={ytAvailable ? formatNum(ch!.totalViews) : "—"} platform="yt" spark={sparkYt} sub="All-time" />
+        <PrimaryKpi label="Subscribers" value={ytAvailable ? formatNum(ch!.subscribers) : "—"} platform="yt" sub="Channel" />
+        <PrimaryKpi label="Followers" value={xAvailable ? formatNum(profile!.followers) : "—"} platform="x" sub={profile ? `@${profile.username}` : undefined} />
+        <PrimaryKpi label="Combined Reach" value={formatNum(tweetMetrics.views)} platform="brand" sub="Views + impressions" />
       </div>
 
-      {/* ---- Secondary metrics strip ---- */}
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4" data-testid="dashboard-secondary-grid">
+      {/* ---- Secondary metrics strip (unified) ---- */}
+      <div
+        className="surface grid grid-cols-2 divide-white/[0.05] rounded-2xl py-0 md:grid-cols-4 md:divide-x"
+        data-testid="dashboard-secondary-grid"
+      >
         <SecondaryKpi label="Videos" value={ytAvailable ? formatNum(ch!.videoCount) : "—"} platform="yt" delay={0} />
         <SecondaryKpi label="Following" value={xAvailable ? formatNum(profile!.following) : "—"} platform="x" delay={40} />
         <SecondaryKpi label="Posts" value={xAvailable ? formatNum(profile!.tweetCount) : "—"} platform="x" delay={80} />
@@ -515,7 +514,7 @@ export default function Dashboard() {
       </div>
 
       {/* ---- Performance hero ---- */}
-      <PerformanceChart bundle={bundle} />
+      <div className="order-3 md:order-none"><PerformanceChart bundle={bundle} /></div>
 
       {/* ---- Content intelligence ---- */}
       <div className="grid gap-4 lg:grid-cols-2">
