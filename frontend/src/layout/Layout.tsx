@@ -1,14 +1,16 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import Navbar from "./Navbar";
 
 const Layout = () => {
+  const location = useLocation();
   return (
     <div className="relative flex h-screen w-full flex-col overflow-hidden bg-[hsl(240,10%,3.5%)]">
       {/* Ambient layered background glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-        <div className="absolute -top-40 left-1/4 h-[420px] w-[520px] rounded-full bg-violet-600/[0.07] blur-[120px]" />
-        <div className="absolute top-1/3 -right-40 h-[380px] w-[420px] rounded-full bg-red-600/[0.05] blur-[120px]" />
-        <div className="absolute bottom-0 left-0 h-[300px] w-[400px] rounded-full bg-sky-600/[0.04] blur-[120px]" />
+        <div className="ambient-1 absolute -top-40 left-1/4 h-[420px] w-[520px] rounded-full bg-violet-600/[0.07] blur-[120px]" />
+        <div className="ambient-2 absolute top-1/3 -right-40 h-[380px] w-[420px] rounded-full bg-red-600/[0.05] blur-[120px]" />
+        <div className="ambient-3 absolute bottom-0 left-0 h-[300px] w-[400px] rounded-full bg-sky-600/[0.04] blur-[120px]" />
+        <div className="noise-overlay" />
         <div
           className="absolute inset-0 opacity-[0.025]"
           style={{
@@ -24,7 +26,7 @@ const Layout = () => {
       <div className="relative flex flex-col flex-1 overflow-hidden">
         <Navbar />
         <main className="flex-1 overflow-y-auto p-4 md:px-8 lg:py-8">
-          <div className="mx-auto max-w-[1400px]">
+          <div className="mx-auto max-w-[1400px] anim-page-in" key={location.pathname}>
             <Outlet />
           </div>
         </main>

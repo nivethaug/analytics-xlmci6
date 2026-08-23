@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Eye, Film, Youtube, TrendingDown, RefreshCw,
@@ -18,6 +18,77 @@ const X_SVG = (
 
 function Skeleton({ className = "" }: { className?: string }) {
   return <div className={`animate-pulse rounded-xl bg-white/[0.045] ${className}`} />;
+}
+
+/* ---------- motion primitives ---------- */
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+/** Count a numeric string up from 0 on mount (handles "4,820", "2.3%"). */
+function CountUp({ value, className }: { value: string; className?: string }) {
+  const [display, setDisplay] = useState(prefersReducedMotion() ? value : "0");
+  const num = parseFloat(value.replace(/[^0-9.]/g, ""));
+  const suffix = value.replace(/^[^A-Za-z%]*/, "");
+  const isNum = value.trim() !== "" && !isNaN(num);
+  useEffect(() => {
+    if (!isNum || prefersReducedMotion()) { setDisplay(value); return; }
+    const dur = 900, t0 = performance.now();
+    const decimals = (value.split(".")[1] ?? "").replace(/[^0-9]/g, "").length;
+    let raf = 0;
+    const tick = (t: number) => {
+      const p = Math.min(1, (t - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3); // ease-out cubic
+      const cur = num * eased;
+      setDisplay(
+        num >= 1000
+          ? Math.round(cur).toLocaleString()
+          : decimals ? cur.toFixed(decimals) : String(Math.round(cur))
+      );
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <span className={className}>{isNum ? display + suffix : value}</span>;
+}
+
+/** Reveal children when scrolled into view (fade + slight upward motion). */
+function Reveal({ children, delay = 0, className = "" }: { children: React.ReactNode; delay?: number; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (prefersReducedMotion()) { setShown(true); return; }
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setShown(true); io.disconnect(); } },
+      { threshold: 0.08 }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div
+      ref={ref}
+      className={`${className} ${shown ? "anim-fade-up" : "opacity-0"}`}
+      style={shown ? { animationDelay: `${delay}ms` } : undefined}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Cursor-following radial glow (sets --mx/--my for .glow-spot). */
+function useGlowSpot<T extends HTMLElement>() {
+  return {
+    onMouseMove: (e: React.MouseEvent<T>) => {
+      const el = e.currentTarget;
+      const r = el.getBoundingClientRect();
+      el.style.setProperty("--mx", `${e.clientX - r.left}px`);
+      el.style.setProperty("--my", `${e.clientY - r.top}px`);
+    },
+  };
 }
 
 /* ---------- derived analytics (real data only) ---------- */
@@ -89,17 +160,19 @@ function DeltaBadge({ pct, periodLabel, noDataLabel = "No history yet" }: { pct:
 
 function KpiCard({ label, value, pct, periodLabel, icon, testId, loading, noDataLabel }:
   { label: string; value: string; pct: number | null; periodLabel: string; icon: React.ReactNode; testId: string; loading?: boolean; noDataLabel?: string }) {
+  const glow = useGlowSpot<HTMLDivElement>();
   return (
     <div
       data-testid={testId}
-      className="surface surface-hover group relative overflow-hidden bg-gradient-to-b from-white/[0.03] to-transparent p-4"
+      {...glow}
+      className="surface surface-hover glow-spot group relative overflow-hidden rounded-xl bg-gradient-to-b from-white/[0.03] to-transparent p-4 transition-[transform,border-color] duration-200 hover:-translate-y-[3px] hover:border-white/[0.14]"
     >
       <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-soft">
         <span className="text-red-400/80">{icon}</span>{label}
       </p>
       <div className="mt-2.5 flex items-baseline">
         {loading ? <Skeleton className="h-9 w-20" /> : (
-          <p className="text-[32px] font-semibold leading-none tracking-tight text-white tabular-nums">{value}</p>
+          <CountUp value={value} className="block text-[32px] font-semibold leading-none tracking-tight text-white tabular-nums transition-transform duration-200 group-hover:scale-[1.02] group-hover:origin-left" />
         )}
       </div>
       <DeltaBadge pct={pct} periodLabel={periodLabel} noDataLabel={noDataLabel} />
@@ -132,7 +205,7 @@ function AttentionCard({ tone, icon, title, detail, metric, testId, delay }:
         <div className="min-w-0">
           <p className="text-[12.5px] font-semibold leading-snug text-white/90">{title}</p>
           {detail && <p className="mt-0.5 truncate text-[11.5px] text-soft">{detail}</p>}
-          {metric && <p className={`mt-1 text-[12px] font-semibold tabular-nums ${tone === "down" ? "text-rose-300" : tone === "up" ? "text-emerald-300" : "text-violet-300"}`}>{metric}</p>}
+          {metric && <CountUp value={metric} className={`mt-1 block text-[12px] font-semibold tabular-nums anim-pop-in ${tone === "down" ? "text-rose-300" : tone === "up" ? "text-emerald-300" : "text-violet-300"}`} />}
         </div>
       </div>
     </div>
