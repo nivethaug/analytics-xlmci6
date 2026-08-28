@@ -5,7 +5,7 @@ import {
   Zap, BarChart3, Rocket, ArrowUpRight, ArrowDownRight, Clock, ThumbsUp, MessageCircle, Minus, ArrowRight,
 } from "lucide-react";
 import { fetchAll, formatNum, formatDate, type ChannelBundle, type Video } from "@/features/youtube";
-import { fetchProfile, fetchTweets, type TwitterProfile, type Tweet } from "@/features/twitter";
+import { fetchProfile, type TwitterProfile } from "@/features/twitter";
 
 /* ---------- brand assets ---------- */
 
@@ -486,7 +486,6 @@ function PlatformRow({ label, yt, x }: { label: string; yt: React.ReactNode; x: 
 export default function Dashboard() {
   const [bundle, setBundle] = useState<ChannelBundle | null>(null);
   const [profile, setProfile] = useState<TwitterProfile | null>(null);
-  const [tweets, setTweets] = useState<Tweet[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<Date>(new Date());
@@ -496,7 +495,6 @@ export default function Dashboard() {
     try {
       const [b, p] = await Promise.all([fetchAll().catch(() => null), fetchProfile().catch(() => null)]);
       setBundle(b); setProfile(p);
-      try { setTweets(await fetchTweets()); } catch { setTweets([]); }
       setLastSync(new Date());
     } finally {
       setLoading(false);
@@ -711,34 +709,17 @@ export default function Dashboard() {
             <h3 className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-[0.1em] text-soft">
               <span className="text-white/70">{X_SVG}</span>X
             </h3>
-            {(tweets ?? []).length > 0 ? (
-              <>
-                <p className="mt-2 text-[11.5px] text-soft">Recent posts from @{profile?.username ?? "your account"}</p>
-                <ul className="mt-2 space-y-2" data-testid="dashboard-post-list">
-                  {(tweets ?? []).slice(0, 3).map((t, i) => (
-                    <li key={t.id} className="group/post flex items-start gap-2.5 rounded-xl border border-white/[0.04] bg-white/[0.015] p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-white/[0.09]" data-testid="dashboard-post-row">
-                      <span className="w-4 shrink-0 text-center text-[11px] font-semibold tabular-nums text-soft/70">{i + 1}</span>
-                      <div className="min-w-0">
-                        <p className="line-clamp-2 text-[12px] leading-relaxed text-white/80 transition-colors group-hover/post:text-white">{t.text}</p>
-                        <p className="mt-1.5 text-[11px] tabular-nums text-soft">{formatDate(t.createdAt)}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : (
-              <div className="mt-3 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-white/[0.08] bg-white/[0.012] px-4 py-10 text-center">
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.06] text-white/60">{X_SVG}</span>
-                <p className="mt-2.5 text-[12.5px] font-medium text-white/85">X post analytics</p>
-                <p className="mt-1 max-w-[240px] text-[11px] leading-relaxed text-soft">
-                  Your account is connected, but post-level metrics are limited by your current X API access.
-                </p>
-                <Link to="/integrations" data-testid="dashboard-x-upgrade-button"
-                  className="mt-3 rounded-[10px] border border-white/[0.09] bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/85 transition-colors hover:bg-white/[0.08]">
-                  View integration
-                </Link>
-              </div>
-            )}
+            <div className="mt-3 flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-white/[0.08] bg-white/[0.012] px-4 py-10 text-center">
+              <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.06] text-white/60">{X_SVG}</span>
+              <p className="mt-2.5 text-[12.5px] font-medium text-white/85">X post analytics</p>
+              <p className="mt-1 max-w-[240px] text-[11px] leading-relaxed text-soft">
+                Your account is connected, but post-level metrics are limited by your current X API access.
+              </p>
+              <Link to="/integrations" data-testid="dashboard-x-upgrade-button"
+                className="mt-3 rounded-[10px] border border-white/[0.09] bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-white/85 transition-colors hover:bg-white/[0.08]">
+                View integration
+              </Link>
+            </div>
             {profile && (
               <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/[0.05] pt-3.5 text-center" data-testid="dashboard-x-profile-stats">
                 <div><p className="text-[14px] font-semibold tabular-nums text-white">{formatNum(profile.followers)}</p><p className="text-[10px] text-soft">Followers</p></div>

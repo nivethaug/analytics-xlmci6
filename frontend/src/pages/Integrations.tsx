@@ -16,7 +16,7 @@ interface Integration {
 
 const initial: Integration[] = [
   { id: "youtube", name: "YouTube", description: "Channel statistics, video performance and subscriber data via your connected Google account.", connected: true, scopes: ["youtube.readonly", "yt-analytics.readonly"] },
-  { id: "x", name: "X (Twitter)", description: "Your connected X profile and the 3 most recent tweets with engagement metrics.", connected: true, scopes: ["tweet.read", "users.read", "offline.access"] },
+  { id: "x", name: "X (Twitter)", description: "Your connected X profile with follower and post-count metrics.", connected: true, scopes: ["tweet.read", "users.read", "offline.access"] },
   { id: "slack", name: "Slack", description: "Post weekly analytics digests to a channel.", connected: false, scopes: ["chat:write"] },
   { id: "notion", name: "Notion", description: "Sync monthly reports into a Notion database.", connected: false, scopes: ["insert_content"] },
 ];

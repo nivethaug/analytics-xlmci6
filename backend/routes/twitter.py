@@ -57,41 +57,5 @@ async def get_profile():
     }
 
 
-@router.get("/tweets")
-async def get_tweets(max_results: int = 2):
-    """Latest tweets (top 2). X API requires max_results between 5 and 100,
-    so we always request 10 and slice the top N after fetching."""
-    n = max(1, min(int(max_results), 2))
-    try:
-        me = _proxy("2/users/me")
-        user_id = (me.get("data") or {}).get("id")
-        data = _proxy(
-            f"2/users/{user_id}/tweets?max_results=10"
-            "&tweet.fields=created_at,public_metrics"
-            "&exclude=replies"
-        )
-    except HTTPException as e:
-        if e.status_code == 402 or "credits depleted" in str(e.detail):
-            raise HTTPException(
-                status_code=402,
-                detail="X API credits depleted: the connected X account is on the Free tier, which allows posting and profile reads but not reading tweets. Upgrade the X API tier to enable tweet fetching.",
-            )
-        raise
-    tweets = []
-    raw = sorted(
-        data.get("data") or [],
-        key=lambda t: t.get("created_at") or "",
-        reverse=True,
-    )[:n]
-    for t in raw:
-        m = t.get("public_metrics", {}) or {}
-        tweets.append({
-            "id": t.get("id"),
-            "text": t.get("text"),
-            "createdAt": t.get("created_at"),
-            "likes": int(m.get("like_count", 0) or 0),
-            "retweets": int(m.get("retweet_count", 0) or 0),
-            "replies": int(m.get("reply_count", 0) or 0),
-            "impressions": int(m.get("impression_count", 0) or 0),
-        })
-    return {"tweets": tweets}
+# Note: tweet/timeline reads are a PAID X API tier — intentionally not offered.
+# Only profile reads (free) and posting are supported.
