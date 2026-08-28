@@ -58,14 +58,15 @@ async def get_profile():
 
 
 @router.get("/tweets")
-async def get_tweets(max_results: int = 3):
-    """Latest tweets (capped at 3)."""
-    n = max(1, min(int(max_results), 3))
+async def get_tweets(max_results: int = 2):
+    """Latest tweets (top 2). X API requires max_results between 5 and 100,
+    so we always request 10 and slice the top N after fetching."""
+    n = max(1, min(int(max_results), 2))
     try:
         me = _proxy("2/users/me")
         user_id = (me.get("data") or {}).get("id")
         data = _proxy(
-            f"2/users/{user_id}/tweets?max_results={n}"
+            f"2/users/{user_id}/tweets?max_results=10"
             "&tweet.fields=created_at,public_metrics"
             "&exclude=replies"
         )
@@ -77,7 +78,12 @@ async def get_tweets(max_results: int = 3):
             )
         raise
     tweets = []
-    for t in (data.get("data") or []):
+    raw = sorted(
+        data.get("data") or [],
+        key=lambda t: t.get("created_at") or "",
+        reverse=True,
+    )[:n]
+    for t in raw:
         m = t.get("public_metrics", {}) or {}
         tweets.append({
             "id": t.get("id"),
