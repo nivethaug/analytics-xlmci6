@@ -15,6 +15,7 @@ from routes.health import router as health_router
 from routes.auth import router as auth_router
 from routes.youtube import router as youtube_router
 from routes.twitter import router as twitter_router
+from routes.reddit import router as reddit_router
 
 
 @asynccontextmanager
@@ -60,6 +61,7 @@ app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(youtube_router)
 app.include_router(twitter_router)
+app.include_router(reddit_router)
 
 
 @app.get("/swagger", include_in_schema=False)

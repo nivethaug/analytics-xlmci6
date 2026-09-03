@@ -8,6 +8,7 @@ import Layout from "./layout/Layout";
 import Dashboard from "./pages/Dashboard";
 import Integrations from "./pages/Integrations";
 import X from "./pages/X";
+import Reddit from "./pages/Reddit";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/integrations" element={<Integrations />} />
               <Route path="/x" element={<X />} />
+              <Route path="/reddit" element={<Reddit />} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
