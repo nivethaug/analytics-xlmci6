@@ -16,7 +16,12 @@ from core.config import settings
 router = APIRouter(prefix="/api/reddit", tags=["Reddit"])
 
 API_BASE = "https://arctic-shift.photon-reddit.com/api"
-DEFAULT_SUBS = ["AI_India", "nocode", "developersIndia"]
+DEFAULT_SUBS = [
+    "AI_India", "nocode", "developersIndia",
+    "NoCodeAppBuilder", "lowcode", "webdev", "SaaS",
+    "Entrepreneur", "artificial", "ChatGPT", "OpenAI",
+    "vibecoding", "india", "startups_india",
+]
 CACHE_TTL = 900  # 15 min
 TIMEOUT = 20
 
@@ -92,7 +97,7 @@ def get_subs(subreddits: Optional[str] = None):
     """Fetch about-info for a comma-separated list of subreddits."""
     subs = [s.strip() for s in (subreddits or "").split(",") if s.strip()] or DEFAULT_SUBS
     result, errors = {}, {}
-    for s in subs[:5]:
+    for s in subs:
         key = f"sub:{s.lower()}"
         try:
             cached = _cached(key)
@@ -115,6 +120,7 @@ def get_subs(subreddits: Optional[str] = None):
                     "permalink": p["url"],
                     "url": p["url"],
                     "flair": None,
+                    "selftext": p.get("selftext", ""),
                 }
                 for p in posts_raw
             ]
@@ -131,7 +137,9 @@ def get_posts(subreddit: str, limit: int = 25):
         raise HTTPException(400, "Invalid subreddit name")
     key = f"posts:{sub.lower()}:{limit}"
     try:
-        posts = _cached(key) or _store(key, _fetch_posts(sub, min(limit, 50)))
+        posts = _cached(key)
+        if not posts:
+            posts = _store(key, _fetch_posts(sub, min(limit, 50)))
     except Exception:
         raise HTTPException(503, "Reddit data temporarily unavailable.")
     return {"subreddit": sub, "posts": posts}

@@ -6,7 +6,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { fetchSubs, RedditSub } from "@/features/reddit";
 
-const DEFAULT_SUBS = ["AI_India", "nocode", "developersIndia"];
+const DEFAULT_SUBS = [
+  "AI_India", "nocode", "developersIndia",
+  "NoCodeAppBuilder", "lowcode", "webdev", "SaaS",
+  "Entrepreneur", "artificial", "ChatGPT", "OpenAI",
+  "vibecoding", "india", "startups_india",
+];
 
 const fmt = (n: number | null | undefined) =>
   n == null ? "—" : n >= 1000000 ? `${(n / 1000000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
