@@ -11,6 +11,8 @@ export interface RedditPost {
   permalink: string;
   url: string;
   flair: string | null;
+  removed?: boolean;
+  removedBy?: string | null;
 }
 
 export interface RedditSub {

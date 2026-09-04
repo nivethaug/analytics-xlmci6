@@ -58,6 +58,11 @@ const SubCard = ({ sub }: { sub: RedditSub }) => (
                 <span className="flex items-center gap-1"><MessagesSquare aria-hidden="true" className="h-3 w-3" /> {fmt(p.numComments)}</span>
                 <span>u/{p.author}</span>
                 <span>{timeAgo(p.createdUtc)} ago</span>
+                {p.removed ? (
+                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0" data-testid="reddit-post-removed-badge">
+                    Removed by moderator
+                  </Badge>
+                ) : null}
                 {p.flair ? <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{p.flair}</Badge> : null}
               </div>
             </li>

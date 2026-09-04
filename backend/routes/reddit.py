@@ -68,17 +68,24 @@ def _fetch_about(sub: str) -> dict:
 def _fetch_posts(sub: str, limit: int = 25) -> list:
     """Latest posts from Arctic Shift (no 'newest' sort param needed; results
     come back newest-first)."""
-    fields = "id,subreddit,title,author,score,num_comments,created_utc,permalink,over_18,selftext"
-    # Arctic Shift uses 'url' not 'permalink'; drop invalid fields if 400.
+    # Fetch without 'fields' param: removal fields (removed_by_category etc.)
+    # exist in the payload but are not accepted by the fields filter.
     try:
-        data = _get(f"{API_BASE}/posts/search",
-                    {"subreddit": sub, "limit": limit, "fields": fields})
-    except requests.HTTPError:
         data = _get(f"{API_BASE}/posts/search", {"subreddit": sub, "limit": limit})
+    except requests.HTTPError:
+        data = _get(f"{API_BASE}/posts/search",
+                    {"subreddit": sub, "limit": limit,
+                     "fields": "id,subreddit,title,author,score,num_comments,created_utc,permalink,over_18,selftext"})
     rows = data.get("data") or []
     posts = []
     for p in rows:
         permalink = p.get("permalink") or f"/r/{sub}/comments/{p.get('id')}/"
+        removed = bool(
+            p.get("removed_by_category")
+            or p.get("removal_reason")
+            or p.get("banned_by")
+            or p.get("removed_by")
+        )
         posts.append({
             "id": p.get("id"),
             "title": p.get("title", ""),
@@ -88,8 +95,35 @@ def _fetch_posts(sub: str, limit: int = 25) -> list:
             "created_utc": p.get("created_utc"),
             "url": f"https://www.reddit.com{permalink}" if permalink.startswith("/") else permalink,
             "selftext": (p.get("selftext") or "")[:280],
+            "removed": removed,
+            "removed_by": p.get("removed_by_category") or p.get("banned_by") or "moderator",
         })
     return posts
+
+
+# Demand-related keyword groups: apps/websites, no-code, AI agents, bots
+KEYWORDS = [
+    "app", "website", "web app", "landing page", "saas", "mvp", "platform",
+    "tool", "dashboard",
+    "no code", "nocode", "no-code", "low code", "lowcode", "builder",
+    "drag and drop", "bubble", "webflow",
+    "ai agent", "agent", "autonomous", "chatgpt", "gpt", "llm", "automation",
+    "bot", "discord bot", "telegram bot", "slack bot", "chatbot", "scraper",
+]
+
+
+def _matches_demand(p: dict) -> bool:
+    text = f"{p.get('title', '')} {p.get('selftext', '')}".lower()
+    return any(k in text for k in KEYWORDS)
+
+
+def _filter_posts(posts: list) -> list:
+    """Keep demand-related posts, plus posts removed by moderators."""
+    out = []
+    for p in posts:
+        if p.get("removed") or _matches_demand(p):
+            out.append(p)
+    return out or posts  # never return an empty card
 
 
 @router.get("/subs")
@@ -121,8 +155,10 @@ def get_subs(subreddits: Optional[str] = None):
                     "url": p["url"],
                     "flair": None,
                     "selftext": p.get("selftext", ""),
+                    "removed": p.get("removed", False),
+                    "removedBy": p.get("removed_by"),
                 }
-                for p in posts_raw
+                for p in _filter_posts(posts_raw)
             ]
             result[s] = _store(key, about)
         except Exception:
@@ -139,7 +175,7 @@ def get_posts(subreddit: str, limit: int = 25):
     try:
         posts = _cached(key)
         if not posts:
-            posts = _store(key, _fetch_posts(sub, min(limit, 50)))
+            posts = _store(key, _filter_posts(_fetch_posts(sub, min(limit, 100))))
     except Exception:
         raise HTTPException(503, "Reddit data temporarily unavailable.")
     return {"subreddit": sub, "posts": posts}
