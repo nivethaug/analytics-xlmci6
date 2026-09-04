@@ -118,12 +118,16 @@ def _matches_demand(p: dict) -> bool:
 
 
 def _filter_posts(posts: list) -> list:
-    """Keep demand-related posts, plus posts removed by moderators."""
+    """Keep demand-related posts; exclude posts removed by moderators."""
     out = []
     for p in posts:
-        if p.get("removed") or _matches_demand(p):
+        if p.get("removed"):
+            continue
+        if _matches_demand(p):
             out.append(p)
-    return out or posts  # never return an empty card
+    if not out:  # fallback: latest non-removed posts, never an empty card
+        out = [p for p in posts if not p.get("removed")] or posts
+    return out
 
 
 @router.get("/subs")
@@ -132,7 +136,7 @@ def get_subs(subreddits: Optional[str] = None):
     subs = [s.strip() for s in (subreddits or "").split(",") if s.strip()] or DEFAULT_SUBS
     result, errors = {}, {}
     for s in subs:
-        key = f"sub:{s.lower()}"
+        key = f"v2:sub:{s.lower()}"
         try:
             cached = _cached(key)
             if cached:
@@ -171,7 +175,7 @@ def get_posts(subreddit: str, limit: int = 25):
     sub = subreddit.strip()[:50]
     if not sub.replace("_", "").isalnum():
         raise HTTPException(400, "Invalid subreddit name")
-    key = f"posts:{sub.lower()}:{limit}"
+    key = f"v2:posts:{sub.lower()}:{limit}"
     try:
         posts = _cached(key)
         if not posts:
